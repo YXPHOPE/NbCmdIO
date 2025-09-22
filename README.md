@@ -38,7 +38,7 @@ from nbcmdio import prt
 def NbCmdIO():
     # 清屏并设置终端标题
     prt.cls().setTitle('NbCmdIO')
-    prt[2].fg_yellow().bg_hex("#ccf").alignCenter(" NbCmdIO by Cipen version "+version+' ')
+    prt[2].fg_yellow().bg_hex("#ccf").alignCenter(" NbCmdIO by Cipen version "+prt.__version__+' ')
     Width = 40
     Height = 10
     centerOffset = (prt.size_col - Width) // 2
@@ -81,8 +81,10 @@ def NbCmdIO():
     with prt.fg_blue().bold()[0,0]:
         for i in range(len(lines)):
             prt[i](lines[i][18:])
-
+    # 跳至最后一行并结束
     prt[Height].end().reset()
+
+NbCmdIO()
 ```
 
 ## 🔮 未来路线图

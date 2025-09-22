@@ -1,10 +1,9 @@
 """
 Author: Cipen
 Date:   2024/05/27
-Desc:   class PRT() 提供一个基于控制台输出的控制输出模式
-只需设置一次Style，即可用于在任意loc的文字输出，直到reset
+Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，只需设置一次Style，即可用于在任意loc的文字输出，直到reset
 参见：https://www.man7.org/linux/man-pages/man4/console_codes.4.html
-少部分内容借鉴colorama、curses
+致谢：少部分内容借鉴colorama、curses
 """
 
 from typing import Any, Union
@@ -12,61 +11,19 @@ from platform import system as getOS
 from os import system, get_terminal_size
 from unicodedata import east_asian_width
 import re
-import time
-version = "1.8.1"
+from .style import Style
 
 # window cmd 默认禁用ANSI 转义序列，可通过以下3种方法启用
 # 1. cls
 # 2. reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1
 # 3. kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
-class Style:
-    RESET = '\033[0m'
-    def __init__(self, style: str) -> None:
-        self.style = style
-    def __str__(self) -> str:
-        return self.style
-    def __add__(self, other):
-        return self.style+other
-    def __radd__(self, other):
-        return other+self.style
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        print(self.style,end="")
-        print(*args,**kwds)
-        print(self.RESET, end="")
-    def reset(self):
-        print(self.RESET,end="")
-
-
-CSI = "\033["
-BOLD = Style(CSI + "1m")
-ITALICS = Style(CSI + "3m")
-UNDERLINE = Style(CSI + "4m")
-BLINK = Style(CSI + "5m")
-VERSE = Style(CSI + "7m")
-STRIKE = Style(CSI + "9m")
-FG_BLACK = Style(CSI + "30m")
-BG_BLACK = Style(CSI + "40m")
-FG_RED = Style(CSI + "31m")
-BG_RED = Style(CSI + "41m")
-FG_GREEN = Style(CSI + "32m")
-BG_GREEN = Style(CSI + "42m")
-FG_YELLOW = Style(CSI + "33m")
-BG_YELLOW = Style(CSI + "43m")
-FG_BLUE = Style(CSI + "34m")
-BG_BLUE = Style(CSI + "44m")
-FG_MAGENTA = Style(CSI + "35m")
-BG_MAGENTA = Style(CSI + "45m")
-FG_CYAN = Style(CSI + "36m")
-BG_CYAN = Style(CSI + "46m")
-FG_WHITE = Style(CSI + "37m")
-BG_WHITE = Style(CSI + "47m")
-
 class Output:
     __cls = "cls"
     CSI = '\033['
     OSC = '\033]'
     RESET = '\033[0m'
+    __version__ = '1.8.3'
 
     def __init__(self, auto_reset=True) -> None:
         """只需通过链式调用设置一次Style，即可用于在with上下文中任意loc的文字输出，直到reset"""
@@ -568,72 +525,12 @@ class Output:
             print()
 
 
-os = getOS()
-if os=="Windows":
-    import msvcrt
-elif os=="Linux":
-    import termios
-
-class Input:
-    WIN_KEY_MAP = {
-        8: "BackSpace",
-        9: "Tab",
-        13: "Enter",
-        27: "Esc",
-        59: "F1",
-        60: "F2",
-        61: "F3",
-        62: "F4",
-        63: "F5",
-        64: "F6",
-        65: "F7",
-        66: "F8",
-        67: "F9",
-        68: "F10",
-        71: "Home",
-        72: "ArrowUp",
-        73: "PageUp",
-        77: "ArrowRight",
-        75: "ArrowLeft",
-        80: "ArrowDown",
-        81: "PageDown",
-        82: "Insert",
-        83: "Delete",
-        133: "F11",
-        134: "F12",
-    }
-    def __init__(self) -> None:
-        self.os = getOS()
-    def win_get_key(self, timeout=0.1):
-        start_time = time.time()
-        key = None
-
-        # 等待按键或超时
-        while (time.time() - start_time) < timeout:
-            if msvcrt.kbhit():
-                first_byte = msvcrt.getch()
-                # 检查是否为扩展键（功能键）
-                if first_byte in (b'\xe0', b'\x00'):
-                    if msvcrt.kbhit():
-                        second_byte = msvcrt.getch()
-                        key = self.WIN_KEY_MAP.get(ord(second_byte), f'Unknown Key: {ord(second_byte)}')
-                    else:
-                        key = str(first_byte)
-                else:
-                    o = ord(first_byte)
-                    key = self.WIN_KEY_MAP.get(o,None) if o<=31 else first_byte.decode()
-                break
-            time.sleep(0.01)  # 减少 CPU 占用
-
-        return key
-
 prt = Output()
-inp = Input()
 
 def NbCmdIO():
     # 清屏并设置终端标题
     prt.cls().setTitle('NbCmdIO')
-    prt[2].fg_yellow().bg_hex("#ccf").alignCenter(" NbCmdIO by Cipen version "+version+' ')
+    prt[2].fg_yellow().bg_hex("#ccf").alignCenter(" NbCmdIO by Cipen version "+prt.__version__+' ')
     Width = 40
     Height = 10
     centerOffset = (prt.size_col - Width) // 2
@@ -676,7 +573,7 @@ def NbCmdIO():
     with prt.fg_blue().bold()[0,0]:
         for i in range(len(lines)):
             prt[i](lines[i][18:])
-
+    # 跳至最后一行并结束
     prt[Height].end().reset()
     # prt.set_origin_zero()
     # prt.hideCursor()
