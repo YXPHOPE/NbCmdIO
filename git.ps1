@@ -1,3 +1,4 @@
+﻿
 param (
     [Parameter(Mandatory=$false)]
     [string]$RemoteUrl = "https://github.com/YXPHOPE/NbCmdIO",
@@ -5,6 +6,8 @@ param (
     [Parameter(Mandatory=$true)]
     [string]$CommitMessage  # 强制要求的提交信息
 )
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
 # 获取当前脚本所在的目录
 $scriptPath = $PSScriptRoot

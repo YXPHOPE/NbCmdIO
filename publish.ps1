@@ -1,7 +1,15 @@
-<#
+﻿<#
 .SYNOPSIS
 发布包到 PyPI
 #>
+
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+# 获取当前脚本所在的目录
+$scriptPath = $PSScriptRoot
+
+# 切换到该目录
+Set-Location -Path $scriptPath
 
 # 检查twine是否安装
 if (-not (Get-Command twine -ErrorAction SilentlyContinue)) {
