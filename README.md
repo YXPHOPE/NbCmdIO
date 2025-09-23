@@ -6,6 +6,9 @@
 
 ## 🌟 核心功能亮点
 
+### ⚡ 支持链式调用
+- 随时随地，设置光标位置、样式，方便快捷、清晰易读！ `prt[row, col].bold("text")`
+
 ### 🎨 真彩RGB终端着色
 - 支持以RGB、HEX格式设定前景色、背景色
 - 支持默认颜色：Black、Red、Green等
@@ -20,7 +23,6 @@
 - 嵌套区域支持
 
 ### ⌨️ 输入捕获（路线图）
-- 低级键盘输入捕获
 - 单键无缓冲读取
 - 快捷键组合检测
 
@@ -36,30 +38,32 @@ pip install nbcmdio
 from nbcmdio import prt
 
 def NbCmdIO():
+    lavender = "#ccf"
     # 清屏并设置终端标题
     prt.cls().setTitle('NbCmdIO')
-    prt[2].fg_yellow().bg_hex("#ccf").alignCenter(" NbCmdIO by Cipen version "+prt.__version__+' ')
+    # 在第2行 以文字黄色 背景色#ccf  居中显示
+    prt[2].fg_yellow().bg_hex(lavender).alignCenter(" NbCmdIO by Cipen ")
     Width = 40
     Height = 10
     centerOffset = (prt.size_col - Width) // 2
-    # 设定新区域
-    prt.fg_hex('#CCF').rectangle(3, centerOffset, Width, Height)
+    # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
+    prt.fg_hex(lavender)[3,centerOffset].rectangle(Width, Height)
+    prt.fg_blue()[0,3](" NbCmdIO ").bold()[0,Width-8](prt.__version__)
     b2 = '  '
-    # 进入prt上下文（关闭自动重置样式），在区域的4个角添加方形色块
-    with prt.bg_hex('#ccf'):
+    # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
+    with prt.bg_hex(lavender):
         prt[1,1](b2)[1,Width-1](b2)
         prt[Height,1](b2)[Height,Width-1](b2)
     # 字符串内添加样式
-    line1 = f"Welcome to {prt.bold().bg_hex('#ccf').fg_hex('#000')} NbCmdIO "
+    line1 = f"Welcome to {prt.bold().bg_hex(lavender).fg_hex('#000')} NbCmdIO "
     line2 = "Print your string colorfully!"
-    line3 = "-"*(Width-2)
     # 保存并使用样式
     headStyle = prt.fg_red().bold().makeStyle()
     prt[1].use(headStyle).alignCenter(line1) # 在新区域第一行使用样式居中显示文本
     prt[2].use(headStyle).alignCenter(line2)
-    prt[3].use(headStyle).alignCenter(line3)
+    prt[3,3].hline(Width-4)
     
-    text = """
+    text = r"""
  _____    _____    _______ 
 |  _  \  |  _  \  |__   __|
 | |__) | | |__) |    | |   
@@ -67,22 +71,15 @@ def NbCmdIO():
 | |      | | \ \     | |   
 |_|      |_|  \_\    |_|   """[1:]
     lines = text.splitlines()
-    prt.set_origin(4,8,base=1)
-    with prt.fg_red().bold()[0,0]:
-        for i in range(len(lines)):
-            prt[i](lines[i][:8])
-        
-    prt.set_origin(prt.origin_row,prt.origin_col+8)
-    with prt.fg_green().bold()[0,0]:
-        for i in range(len(lines)):
-            prt[i](lines[i][8:18])
-    
-    prt.set_origin(prt.origin_row,prt.origin_col+9)
-    with prt.fg_blue().bold()[0,0]:
-        for i in range(len(lines)):
-            prt[i](lines[i][18:])
-    # 跳至最后一行并结束
-    prt[Height].end().reset()
+    chr1 = [l[:8] for l in lines]
+    chr2 = [l[8:18] for l in lines]
+    chr3 = [l[18:] for l in lines]
+    prt.fg_red().bold()[4, 8].printLinesInRegion(chr1)
+    prt.fg_green().bold()[4, 16].printLinesInRegion(chr2)
+    prt.fg_blue().bold()[4, 25].printLinesInRegion(chr3)
+
+    # 光标跳至本区域下一行，结束
+    prt[Height+1].end()
 
 NbCmdIO()
 ```

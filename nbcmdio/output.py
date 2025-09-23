@@ -4,6 +4,9 @@ Date:   2024/05/27
 Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，只需设置一次Style，即可用于在任意loc的文字输出，直到reset
 参见：https://www.man7.org/linux/man-pages/man4/console_codes.4.html
 致谢：少部分内容借鉴colorama、curses
+
+- [x] 2025/09/22 by Cipen: 统一所有函数，默认不提供row, col，而是直接使用前面[]定位所使用的位置
+- [x] 完成跨平台的getLoc函数
 """
 
 from typing import Any, Union
@@ -12,30 +15,41 @@ from os import system, get_terminal_size
 from unicodedata import east_asian_width
 import re
 from .style import Style
+from .input import inp
 
 # window cmd 默认禁用ANSI 转义序列，可通过以下3种方法启用
 # 1. cls
 # 2. reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1
 # 3. kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
+
+RGB = Union[list[int], tuple[int, int, int]]
+
 class Output:
+    """
+    ### 输出类Output()
+    - 终端色彩：fg_rgb()、bg_hex() 等设定任意前景、背景色，内置bold()、fg_red()等
+    - 光标定位：[row, col] 即可定位到指定位置并供其他函数默认使用该位置，setOrigin()设定新原点，^ | << >> 上下左右
+    - 链式调用：bold().fg_red()\\[2,3]("text")
+    - 自动重置：所有函数内部样式一致，外部根据auto_reset值决定是否自动重置样式，p()、with上下文不重置样式"""
+    CSI = "\033["
+    OSC = "\033]"
+    RESET = "\033[0m"
     __cls = "cls"
-    CSI = '\033['
-    OSC = '\033]'
-    RESET = '\033[0m'
-    __version__ = '1.8.3'
+    __version__ = "1.8.3"
 
     def __init__(self, auto_reset=True) -> None:
-        """只需通过链式调用设置一次Style，即可用于在with上下文中任意loc的文字输出，直到reset"""
         self.auto_reset = auto_reset
         self.size_row = 0
         self.size_col = 0
-        self.getsize()
+        self.getSize()
         self.origin_row = 0
         self.origin_col = 0
         self.width = self.size_col
         self.height = self.size_row
-        self.str = ''
+        self.__row = 1
+        self.__col = 1
+        self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
 
         os = getOS()
@@ -51,9 +65,9 @@ class Output:
                 self.cls()
         elif os == "Linux":
             self.__cls = "clear"
-    
+
     def setTitle(self, title: str):
-        print(f'\033]2;{title}\a', end="")
+        print(f"\033]2;{title}\a", end="")
         return self
 
     # 清除相关
@@ -64,31 +78,31 @@ class Output:
 
     def clearAll(self):
         """输出CSI转义序列清屏"""
-        return self.loc(0).__p('2J')
-    
+        return self.loc(0).csi("2J")
+
     def clearAllBeforeCursor(self):
-        return self.__p("1J")
-    
+        return self.csi("1J")
+
     def clearAllAfterCursor(self):
-        return self.__p("0J")
+        return self.csi("0J")
 
     def reset(self):
         """重置所有样式"""
-        self.str = ''
-        return self.__p("0m")
+        self.__str = ""
+        return self.csi("0m")
 
     def clearLine(self):
-        return self.__p("2K")
-    
+        return self.csi("2K")
+
     def clearLineBefore(self, col=-1):
-        if col>=0:
+        if col >= 0:
             self.col(col)
-        return self.__p("1K")
+        return self.csi("1K")
 
     def clearLineAfter(self, col=-1):
-        if col>=0:
+        if col >= 0:
             self.col(col)
-        return self.__p("K")
+        return self.csi("K")
 
     def end(self):
         """重置颜色，并打印换行结尾"""
@@ -96,41 +110,42 @@ class Output:
         print("\n", end="")
         return self
 
-    # 执行 内部打印通道
-    def __p(self, s: str, *args):
+    def csi(self, s: str, *args):
         s = self.CSI + s
-        self.str += s
+        self.__str += s
         print(s, end="")
         if args:
             self.print(*args)
         return self
 
-    # 打印输出的3种方式：prt(*arg)、prt>=value、prt.print(*arg)
+    # 打印输出的2种方式：prt(*arg)、prt.print(*arg)
     def __call__(self, *args: Any, **kwds: Any):
         return self.print(*args, **kwds)
 
-    def __ge__(self, s):
-        print(s, end="")
-
-    def print(self, *args, **kwds):
+    def print(self, *args:Any, **kwds:Any):
         """
         ### 以已加载样式输出所有内容
         - 默认end=""
-        - 将会清除self.str中保存的样式
+        - 将会清除self.__str中保存的样式
         - 默认自动reset重置样式
         """
-        if 'end' not in kwds:
-            kwds['end'] = ""
-        self.str = ''
+        if "end" not in kwds:
+            kwds["end"] = ""
+        self.__str = ""
         print(*args, **kwds)
         return self.reset() if self.auto_reset else self
+    
+    def p(self, *args):
+        """ 不重置样式的输出 """
+        print(*args, end="")
+        return self
 
-    def auto_reset_on(self):
+    def autoResetOn(self):
         self.auto_reset = True
         return self
 
-    def auto_reset_off(self):
-        """不建议关闭自动重置Style，可以使用with上下文管理器来使其中的prt不自动重置"""
+    def autoResetOff(self):
+        """不建议关闭自动重置Style，可以使用with上下文管理器或 p() 来使样式不自动重置"""
         self.auto_reset = False
         return self
 
@@ -143,34 +158,28 @@ class Output:
     def __or__(self, n: int):
         return self.down(n)
 
-    def updown(self, n: int):
-        if n > 0:
-            ud = "A"
-        else:
-            n = -n
-            ud = "B"
-        return self.__p(f"{n}{ud}")
-
     def up(self, n: int, col=-1):
         if n > 0:
-            if col>=0:
-                self.__p(f"{n}F").col(col)
-            self.__p(f"{n}A")
-        elif n==0:
-            if col>=0: self.col(col)
+            if col >= 0:
+                self.csi(f"{n}F").col(col)
+            self.csi(f"{n}A")
+        elif n == 0:
+            if col >= 0:
+                self.col(col)
         else:
             return self.down(-n, col=col)
         return self
 
     def down(self, n: int, col=-1):
-        if n>0:
-            if col>=0:
-                self.__p(f"{n}E").col(col)
-            self.__p(f"{n}B")
+        if n > 0:
+            if col >= 0:
+                self.csi(f"{n}E").col(col)
+            self.csi(f"{n}B")
         elif n == 0:
-            if col>=0: self.col(col)
+            if col >= 0:
+                self.col(col)
         else:
-            return self.up(-n,col)
+            return self.up(-n, col)
         return self
 
     def __lt__(self, n: int):
@@ -182,7 +191,7 @@ class Output:
     def left(self, n: int):
         if n == 0:
             return self
-        return self.__p(f"{n}D") if n >= 0 else self.right(-n)
+        return self.csi(f"{n}D") if n >= 0 else self.right(-n)
 
     def __gt__(self, n: int):
         return self.right(n)
@@ -193,16 +202,19 @@ class Output:
     def right(self, n: int):
         if n == 0:
             return self
-        return self.__p(f"{n}C") if n >= 0 else self.left(-n)
+        return self.csi(f"{n}C") if n >= 0 else self.left(-n)
 
-    def __getitem__(self, key:Union[tuple,int]):
+    def __getitem__(self, key: Union[tuple[int, int], int]):
+        """光标定位到 [row[,col=0]]"""
         if isinstance(key, tuple) and len(key) == 2:
             row, col = key
             return self.loc(row, col)
         elif isinstance(key, int):
-            return self.loc(key, 0) # col的默认值0、1对原始终端无影响，但对自己设定的origin有影响
+            return self.loc(
+                key, 0
+            )  # col的默认值0、1对原始终端无影响，但对自己设定的origin有影响
         else:
-            raise TypeError("Location index must be row, col.")
+            raise TypeError("Location index must be [row, col].")
 
     # 绝对定位
     def loc(self, row: int, col=0):
@@ -210,125 +222,138 @@ class Output:
         ### 光标定位到 row,col\n
         - col: 0 by default
         - 左上角为 1,1
-        - 自动添加set_origin设置的新坐标原点
+        - 基于set_origin设置的新坐标原点
         """
+        self.__row = row
+        self.__col = col
         row += self.origin_row
         col += self.origin_col
-        return self.__p(f"{row};{col}H")
-    
+        return self.csi(f"{row};{col}H")
+
     def col(self, n: int):
         n += self.origin_col
-        return self.__p(f"{n}G")
-    
+        return self.csi(f"{n}G")
+
     def gotoHead(self):
         """回到本行行首（基于坐标原点）"""
         return self.col(0)
 
+    def getLoc(self):
+        print(self.CSI + "6n", end="", flush=True)
+        res = inp.get_str()
+        match = re.match(r"^\x1b\[(\d+);(\d+)R", res)
+        if match:
+            row = int(match.group(1))
+            col = int(match.group(2))
+            return row, col
+        else:
+            raise ValueError(f"无法解析响应: {res!r}")
+
     # 光标相关
     def saveCursor(self):
-        return self.__p("s")
+        return self.csi("s")
 
     def restoreCursor(self):
-        return self.__p("u")
+        return self.csi("u")
 
     def hideCursor(self):
-        return self.__p("?25l")
+        return self.csi("?25l")
 
     def showCursor(self):
-        return self.__p("?25h")
+        return self.csi("?25h")
 
-    # 其他效果（可能没啥效果）
+    # 内置效果（可能没啥效果）
     def bold(self, *args):
-        return self.__p("1m", *args)
+        return self.csi("1m", *args)
 
     def dim(self, *args):
-        return self.__p("2m", *args)
-    
+        return self.csi("2m", *args)
+
     def italics(self, *args):
-        return self.__p("3m", *args)
+        return self.csi("3m", *args)
 
     def underline(self, *args):
-        return self.__p("4m", *args)
+        return self.csi("4m", *args)
 
     def blink(self, *args):
-        return self.__p("5m", *args)
+        return self.csi("5m", *args)
 
     def blinking(self, *args):
-        return self.__p("6m", *args)
-    
-    def invert(self, *args):
-        return self.__p("7m", *args)
-    
-    def invisible(self, *args):
-        return self.__p("8m", *args)
-    
-    def strike(self, *args):
-        return self.__p("9m", *args)
+        return self.csi("6m", *args)
 
-    # 控制台自带颜色
+    def invert(self, *args):
+        return self.csi("7m", *args)
+
+    def invisible(self, *args):
+        return self.csi("8m", *args)
+
+    def strike(self, *args):
+        return self.csi("9m", *args)
+
+    # 内置颜色
     def fg_black(self, *args):
-        return self.__p("30m", *args)
+        return self.csi("30m", *args)
 
     def bg_black(self, *args):
-        return self.__p("40m", *args)
+        return self.csi("40m", *args)
 
     def fg_red(self, *args):
-        return self.__p("31m", *args)
+        return self.csi("31m", *args)
 
     def bg_red(self, *args):
-        return self.__p("41m", *args)
+        return self.csi("41m", *args)
 
     def fg_green(self, *args):
-        return self.__p("32m", *args)
+        return self.csi("32m", *args)
 
     def bg_green(self, *args):
-        return self.__p("42m", *args)
+        return self.csi("42m", *args)
 
     def fg_yellow(self, *args):
-        return self.__p("33m", *args)
+        return self.csi("33m", *args)
 
     def bg_yellow(self, *args):
-        return self.__p("43m", *args)
+        return self.csi("43m", *args)
 
     def fg_blue(self, *args):
-        return self.__p("34m", *args)
+        return self.csi("34m", *args)
 
     def bg_blue(self, *args):
-        return self.__p("44m", *args)
+        return self.csi("44m", *args)
 
     def fg_magenta(self, *args):
-        return self.__p("35m", *args)
+        return self.csi("35m", *args)
 
     def bg_magenta(self, *args):
-        return self.__p("45m", *args)
+        return self.csi("45m", *args)
 
     def fg_cyan(self, *args):
-        return self.__p("36m", *args)
+        return self.csi("36m", *args)
 
     def bg_cyan(self, *args):
-        return self.__p("46m", *args)
+        return self.csi("46m", *args)
 
     def fg_grey(self, *args):
-        return self.__p("37m", *args)
+        return self.csi("37m", *args)
 
     def bg_grey(self, *args):
-        return self.__p("47m", *args)
+        return self.csi("47m", *args)
 
     # 任意颜色
-    def fg_rgb(self, rgb: Union[list, tuple], bg: Union[bool, int] = False):
+    def fg_rgb(self, rgb: RGB, bg: Union[bool, int] = False):
         """
         ### 设置前景文字rgb颜色
         rgb: [0,128,255]
         """
-        rgb_err_info = "Argument rgb needs a list or a tuple, len=3, value between 0~255"
+        err = "Argument rgb needs a list or a tuple, len=3, value between 0~255"
         if not rgb.__len__:
-            raise TypeError(rgb_err_info)
+            raise TypeError(err)
         if len(rgb) != 3:
-            raise ValueError(rgb_err_info)
-        bf = '4' if bg else '3'
-        return self.__p(f"{bf}8;2;{rgb[0]};{rgb[1]};{rgb[2]}m")
+            raise ValueError(err)
+        bf = "4" if bg else "3"
+        return self.csi(f"{bf}8;2;{rgb[0]};{rgb[1]};{rgb[2]}m")
 
-    def bg_rgb(self, rgb: Union[list, tuple]):
+    def bg_rgb(self, rgb: RGB):
         """
         ### 设置背景rgb颜色
         rgb: [0,128,255]
@@ -358,13 +383,21 @@ class Output:
         hex: 0F0, #CCF, 008AFF, #CCCCFF
         """
         return self.fg_hex(hex, 1)
-    
+
     def __str__(self):
-        s = self.str
-        self.str = ''
+        s = self.__str
+        self.__str = ""
         return s
 
-    def makeStyle(self,fg_color: Union[list, tuple, str]="", bg_color: Union[list, tuple, str]="",bold=False, italics=False, undefline=False, strike=False)->Style:
+    def makeStyle(
+        self,
+        fg_color: Union[list[int], tuple[int, int, int], str] = "",
+        bg_color: Union[list, tuple[int, int, int], str] = "",
+        bold=False,
+        italics=False,
+        undefline=False,
+        strike=False,
+    ) -> Style:
         """
         ### 生成Style样式类
         #### 参数
@@ -374,39 +407,39 @@ class Output:
         - italics: bool=False 是否斜体
         - underline: bool=False 是否下划线
         - strike: bool=False 是否删除线
-        #### 参数无有效样式时使用前面积累的self.str作为样式
+        #### 参数无有效样式时使用前面积累的self.__str作为样式
         """
         sty = self.CSI
-        if bold: sty+='1;'
-        if italics: sty+='3;'
-        if undefline: sty+='4;'
-        if strike: sty += '9;'
-        if sty != self.CSI:
-            sty = sty[:-1]+'m'
-        else: sty = ''
+        if bold: sty += "1;"
+        if italics: sty += "3;"
+        if undefline: sty += "4;"
+        if strike: sty += "9;"
+        if sty != self.CSI: sty = sty[:-1] + "m"
+        else: sty = ""
         if fg_color:
-            if type(fg_color)==str:
+            if type(fg_color) == str:
                 self.fg_hex(fg_color)
-            elif type(fg_color)==list or type(fg_color)==tuple:
+            elif type(fg_color) == list or type(fg_color) == tuple:
                 self.fg_rgb(fg_color)
-            sty+=self.str
+            sty += self.__str
         if bg_color:
-            if type(bg_color)==str:
+            if type(bg_color) == str:
                 self.bg_hex(bg_color)
-            elif type(bg_color)==list or type(bg_color)==tuple:
+            elif type(bg_color) == list or type(bg_color) == tuple:
                 self.bg_rgb(bg_color)
-            sty+=self.str
+            sty += self.__str
         if not sty:
-            sty = re.sub(r'\033\[0m','',self.str) # 没有参数，则使用前面已写入的样式，头部自带reset
+            # 没有参数，则使用前面已写入的样式
+            sty = re.sub(r"\033\[0m", "", self.__str)
         self.reset()
         return Style(sty)
-    
+
     def use(self, style: Style):
         """使用Style样式"""
         print(str(style), end="")
         return self
 
-    def getsize(self):
+    def getSize(self):
         """返回终端大小（rows，columns）"""
         try:
             size = get_terminal_size()
@@ -416,38 +449,41 @@ class Output:
             return 30, 120
         return rows, columns
 
-    def goto_center_offset(self, len_str: int):
-        """ 光标到基于原点、使所给文本长度居中的 offset 位置 """
+    def gotoCenterOffset(self, len_str: int):
+        """光标到基于原点、使所给文本长度居中的 offset 位置"""
         width = self.width or self.size_col
         if len_str >= width:
             offset = 0
         else:
             offset = (width - len_str) // 2
-        if self.width!=self.size_col:
-            offset+=1 # 在新的origin中，第0列被|占据
+        if self.width != self.size_col:
+            offset += 1  # 在新的origin中，第0列被|占据
         return self.col(offset)
-    
-    def alignCenter(self, s:str):
-        """ 使文本居中对齐显示 """
-        return self.goto_center_offset(self.get_string_width(s))(s)
-    
-    def alignRight(self, s:str, col=-1):
+
+    def alignCenter(self, s: str):
+        """使文本居中对齐显示"""
+        return self.gotoCenterOffset(self.getStringWidth(s))(s)
+
+    def alignRight(self, s: str, col=-1):
         """
         ### 使文本右对齐
-        - col: -1: 默认方形最右侧对齐，其他：不占用该格，前一格处右对齐 """
-        if col>0: col+=self.origin_col
-        else: col = self.origin_col+self.width+1
-        offset = col-self.get_string_width(s)
-        if offset<0: offset=0
+        - col: -1: 默认方形最右侧对齐，其他：不占用该格，前一格处右对齐"""
+        if col > 0:
+            col += self.origin_col
+        else:
+            col = self.origin_col + self.width + 1
+        offset = col - self.getStringWidth(s)
+        if offset < 0:
+            offset = 0
         return self.col(offset)(s)
 
-    def get_string_width(self, s:str):
-        """ 返回字符串去除CSI转义序列、\n、\t后的显示长度 """
-        raw = re.sub(r'\033\[[\d;\?]*\w', '', s) # 去除csi转义序列
-        raw = re.sub(r'[\n\t]', '', raw)
-        return sum(2 if east_asian_width(c) in ('F', 'W', 'A') else 1 for c in raw)
+    def getStringWidth(self, s: str):
+        """返回字符串去除CSI转义序列、\n、\t后的显示长度"""
+        raw = re.sub(r"\033\[[\d;\?]*\w", "", s)  # 去除csi转义序列
+        raw = re.sub(r"[\n\t]", "", raw)
+        return sum(2 if east_asian_width(c) in ("F", "W", "A") else 1 for c in raw)
 
-    def set_origin(self, row: int, col: int, width=0, height=0, base = 0):
+    def setOrigin(self, row: int, col: int, width=0, height=0, base=0):
         """
         ### 设定新的坐标原点与宽高
         - width, height：未设定则使用终端剩余所有大小
@@ -464,51 +500,70 @@ class Output:
         self.height = height or self.size_row - self.origin_row
         return self
 
-    def set_origin_zero(self):
-        """回复终端左上角位置为原点"""
+    def setOriginTerm(self):
+        """恢复原点位置为终端左上角"""
         self.origin_row = 0
         self.origin_col = 0
-        self.getsize()
+        self.getSize()
         self.width = self.size_col
         self.height = self.size_row
-
-    def hline(self, row: int, col: int, length: int, mark="─"):
-        """在给定位置生成给定长度的**横线**"""
-        self[row, col] >= mark * length
         return self
 
-    def vline(self, row: int, col: int, length: int, mark="│"):
-        """在给定位置生成给定长度的**竖线**"""
+    def hline(self, length: int, row=-1, col=-1, mark="─"):
+        """在给定位置/光标当前位置生成给定长度的**横线**"""
+        if row >= 0 and col >= 0:
+            self[row, col]
+        self(mark * length)
+        return self
+
+    def vline(self, length: int, row=-1, col=-1, mark="│"):
+        """在给定位置/之前设定位置生成给定长度的**竖线**"""
+        if row < 0 or col < 0:
+            row = self.__row
+            col = self.__col
         for i in range(length):
-            self[row + i, col] >= mark
-        return self
+            self[row + i, col].p(mark)
+        return self.print()
 
-    def rectangle(self, row: int, col: int, width: int, height: int, as_origin=True):
-        """ 产生一个方形，并设定新的坐标原点 """
+    def rectangle(self, width: int, height: int, row=-1, col=-1, as_origin=True):
+        """产生一个方形，并设定新的坐标原点"""
+        if row < 0 or col < 0:
+            row = self.__row
+            col = self.__col
         if as_origin:
-            self.set_origin(row, col, width, height)
+            self.setOrigin(row, col, width, height)
             row = col = 0
-        self[row, col] >= "┌"
-        self.hline(row, col + 1, width) >= "┐"
-        self.vline(row + 1, col, height).vline(row + 1, col + width + 1, height)
-        self[row + height + 1, col] >= "└"
-        self.hline(row + height + 1, col + 1, width)
-        self[row + height + 1, col + width + 1] >= "┘"
-        if self.auto_reset: self.reset()
-        return self[1,1]
-    
+        reset = self.auto_reset
+        self.autoResetOff()
+        self[row, col]("┌").hline(width)("┐")
+        self[row + 1, col].vline(height)[row + 1, col + width + 1].vline(height)
+        self[row + height + 1, col]("└").hline(width)("┘")
+        if reset:
+            self.reset()
+        self.auto_reset = reset
+        return self[1, 1]
 
+    def printLinesInRegion(self, lines: Union[str, list[str]], row=-1, col=-1):
+        """在给定坐标处左对齐显示多行文本，不给定则使用上一次设定的位置"""
+        if row < 0 or col < 0:
+            row = self.__row
+            col = self.__col
+        if isinstance(lines, str):
+            lines = lines.splitlines()
+        for i in range(len(lines)):
+            self[i + row, col].p(lines[i])
+        return self.print()
+
+    # with上下文管理
     def __enter__(self):
-        self._in_chain = True
         self.__auto_reset = self.auto_reset
-        self.auto_reset_off()
+        self.autoResetOff()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._in_chain = False
         self.reset()
         if self.__auto_reset:
-            self.auto_reset_on()
+            self.autoResetOn()
         return True
 
     # 日志记录
@@ -517,41 +572,44 @@ class Output:
 
     def test(self):
         """测试终端能显示的指令\033[0-99m"""
-        n=0
+        n = 0
         for i in range(10):
             for j in range(10):
-                n = (10 * i) + j;
-                print("\033[%dm  %3d  \033[0m"%(n, n),end='')
+                n = (10 * i) + j
+                print("\033[%dm  %3d  \033[0m" % (n, n), end="")
             print()
 
 
 prt = Output()
 
+
 def NbCmdIO():
+    lavender = "#ccf"
     # 清屏并设置终端标题
-    prt.cls().setTitle('NbCmdIO')
-    prt[2].fg_yellow().bg_hex("#ccf").alignCenter(" NbCmdIO by Cipen version "+prt.__version__+' ')
-    Width = 40
-    Height = 10
-    centerOffset = (prt.size_col - Width) // 2
-    # 设定新区域
-    prt.fg_hex('#CCF').rectangle(3, centerOffset, Width, Height)
-    b2 = '  '
-    # 进入prt上下文（关闭自动重置样式），在区域的4个角添加方形色块
-    with prt.bg_hex('#ccf'):
-        prt[1,1](b2)[1,Width-1](b2)
-        prt[Height,1](b2)[Height,Width-1](b2)
+    prt.cls().setTitle("NbCmdIO")
+    # 在第2行 以文字黄色 背景色#ccf  居中显示
+    prt[2].fg_yellow().bg_hex(lavender).alignCenter(" NbCmdIO by Cipen ")
+    WIDTH = 40
+    HEIGHT = 10
+    center_offset = (prt.size_col - WIDTH) // 2
+    # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
+    prt.fg_hex(lavender)[3, center_offset].rectangle(WIDTH, HEIGHT)
+    prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
+    b2 = "  "
+    # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
+    with prt.bg_hex(lavender):
+        prt[1, 1](b2)[1, WIDTH - 1](b2)
+        prt[HEIGHT, 1](b2)[HEIGHT, WIDTH - 1](b2)
     # 字符串内添加样式
-    line1 = f"Welcome to {prt.bold().bg_hex('#ccf').fg_hex('#000')} NbCmdIO "
+    line1 = f"Welcome to {prt.bold().bg_hex(lavender).fg_hex('#000')} NbCmdIO "
     line2 = "Print your string colorfully!"
-    line3 = "-"*(Width-2)
     # 保存并使用样式
-    headStyle = prt.fg_red().bold().makeStyle()
-    prt[1].use(headStyle).alignCenter(line1) # 在新区域第一行使用样式居中显示文本
-    prt[2].use(headStyle).alignCenter(line2)
-    prt[3].use(headStyle).alignCenter(line3)
-    
-    text = """
+    head_style = prt.fg_red().bold().makeStyle()
+    prt[1].use(head_style).alignCenter(line1)  # 在新区域第一行使用样式居中显示文本
+    prt[2].use(head_style).alignCenter(line2)
+    prt[3, 3].fg_grey().hline(WIDTH - 4)
+
+    text = r"""
  _____    _____    _______ 
 |  _  \  |  _  \  |__   __|
 | |__) | | |__) |    | |   
@@ -559,35 +617,12 @@ def NbCmdIO():
 | |      | | \ \     | |   
 |_|      |_|  \_\    |_|   """[1:]
     lines = text.splitlines()
-    prt.set_origin(4,8,base=1)
-    with prt.fg_red().bold()[0,0]:
-        for i in range(len(lines)):
-            prt[i](lines[i][:8])
-        
-    prt.set_origin(prt.origin_row,prt.origin_col+8)
-    with prt.fg_green().bold()[0,0]:
-        for i in range(len(lines)):
-            prt[i](lines[i][8:18])
-    
-    prt.set_origin(prt.origin_row,prt.origin_col+9)
-    with prt.fg_blue().bold()[0,0]:
-        for i in range(len(lines)):
-            prt[i](lines[i][18:])
-    # 跳至最后一行并结束
-    prt[Height].end().reset()
-    # prt.set_origin_zero()
-    # prt.hideCursor()
-    # from random import randint
-    # from time import sleep
-    # try:
-    #     while True:
-    #         prt.getsize()
-    #         w = prt.size_col
-    #         h = prt.size_row
-    #         prt[randint(0,h),randint(0,w-1)].bg_rgb([randint(0,255), randint(0,255),randint(0,255)])(b2)
-    #         sleep(0.5)
-    # except:
-    #     prt[h].end().reset()
+    chr1 = [l[:8] for l in lines]
+    chr2 = [l[8:18] for l in lines]
+    chr3 = [l[18:] for l in lines]
+    prt.fg_red().bold()[4, 8].printLinesInRegion(chr1)
+    prt.fg_green().bold()[4, 16].printLinesInRegion(chr2)
+    prt.fg_blue().bold()[4, 25].printLinesInRegion(chr3)
 
-if __name__ == "__main__":
-    NbCmdIO()
+    # 光标跳至本区域下一行，结束
+    prt[HEIGHT + 1].setOriginTerm().end()

@@ -1,14 +1,20 @@
-
 from platform import system as getOS
 import time
+import sys
 
 os = getOS()
-if os=="Windows":
+if os == "Windows":
     import msvcrt
-elif os=="Linux":
+elif os == "Linux":
     import termios
+    import tty
+
 
 class Input:
+    """
+    ### 跨平台输入类Input
+    - 无缓冲单键输入"""
+
     WIN_KEY_MAP = {
         8: "BackSpace",
         9: "Tab",
@@ -36,8 +42,63 @@ class Input:
         133: "F11",
         134: "F12",
     }
+
     def __init__(self) -> None:
         self.os = getOS()
+        self.win = self.os == "Windows"
+
+    def get_char(self):
+        if self.win:
+            return self.win_get_char()
+
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        char = ""
+        try:
+            # 设置原始模式（不缓冲输入）
+            tty.setraw(fd)
+            char = sys.stdin.read(1)
+        finally:
+            # 恢复终端原始设置
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return char
+
+    def get_str(self, timeout=0.5):
+        if self.win:
+            return self.win_get_str(timeout)
+        start_time = time.time()
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        string = ""
+        try:
+            # 设置原始模式（不缓冲输入）
+            tty.setraw(fd)
+            # 只要string 或者 时间到 就停止
+            while (not string) and time.time() - start_time < timeout:
+                string = sys.stdin.read(sys.stdin.seek(0, 2))
+        finally:
+            # 恢复终端原始设置
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return string
+
+    def win_get_char(self):
+        if msvcrt.kbhit():
+            char = msvcrt.getch()
+            return char
+        return ""
+
+    def win_get_str(self, timeout=0.5):
+        start_time = time.time()
+        string = ""
+        while time.time() - start_time < timeout:
+            if msvcrt.kbhit():  # 检查是否有按键
+                char = msvcrt.getch().decode("utf-8", errors="ignore")
+                string += char
+            elif string:
+                break  # 读取完毕
+            time.sleep(0.01)
+        return string
+
     def win_get_key(self, timeout=0.1):
         start_time = time.time()
         key = None
@@ -47,18 +108,25 @@ class Input:
             if msvcrt.kbhit():
                 first_byte = msvcrt.getch()
                 # 检查是否为扩展键（功能键）
-                if first_byte in (b'\xe0', b'\x00'):
+                if first_byte in (b"\xe0", b"\x00"):
                     if msvcrt.kbhit():
                         second_byte = msvcrt.getch()
-                        key = self.WIN_KEY_MAP.get(ord(second_byte), f'Unknown Key: {ord(second_byte)}')
+                        key = self.WIN_KEY_MAP.get(
+                            ord(second_byte), f"Unknown Key: {ord(second_byte)}"
+                        )
                     else:
                         key = str(first_byte)
                 else:
                     o = ord(first_byte)
-                    key = self.WIN_KEY_MAP.get(o,None) if o<=31 else first_byte.decode()
+                    key = (
+                        self.WIN_KEY_MAP.get(o, None)
+                        if o <= 31
+                        else first_byte.decode()
+                    )
                 break
             time.sleep(0.01)  # 减少 CPU 占用
 
         return key
+
 
 inp = Input()
