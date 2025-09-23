@@ -1,4 +1,9 @@
-﻿
+﻿# Git 自动提交推送脚本
+# 功能：
+# 1. 检查是否有未提交的更改
+# 2. 如果有则添加所有更改并提示输入提交信息
+# 3. 检查本地提交是否已推送
+# 4. 如果有未推送的提交则推送到远程
 param (
     [Parameter(Mandatory=$false)]
     [string]$RemoteUrl = "https://github.com/YXPHOPE/NbCmdIO",
@@ -16,54 +21,81 @@ $scriptPath = $PSScriptRoot
 Set-Location -Path $scriptPath
 
 # 检查是否在Git仓库中
-try {
-    $isGitRepo = git rev-parse --is-inside-work-tree 2>$null
-    if (-not $isGitRepo) {
-        throw "当前目录不是Git仓库"
-    }
-} catch {
-    # 如果不是Git仓库，则初始化新仓库
-    git init
-    
-    # 如果没有提供远程URL，提示用户输入
-    if ([string]::IsNullOrWhiteSpace($RemoteUrl)) {
-        $RemoteUrl = Read-Host "⚠️ 请输入远程仓库URL"
-    }
-    
-    # 添加远程仓库
-    git remote add origin $RemoteUrl
-    Write-Host "✅ 已添加远程仓库: $RemoteUrl"
+if (-not (Test-Path ".\.git")) {
+    Write-Host "❌ 错误：当前目录不是Git仓库" -ForegroundColor Red
+    exit 1
 }
 
-# 获取当前分支名称
-$currentBranch = git rev-parse --abbrev-ref HEAD
+# 函数：检查是否有未提交的更改
+function HasUncommittedChanges {
+    $status = git status --porcelain
+    return -not [string]::IsNullOrWhiteSpace($status)
+}
 
-# 添加所有更改
-git add -A 2>&1 | Out-Null
-$status = git status --porcelain
-if ($status) {
-    Write-Host "✅ 已添加以下文件到暂存区:"
-    $status | ForEach-Object { Write-Host "   $($_.Substring(3))" }
+# 函数：检查是否有未推送的提交（修复版）
+function HasUnpushedCommits {
+    # 获取当前分支名
+    $branch = git rev-parse --abbrev-ref HEAD
+    
+    # 获取远程分支名（正确处理未设置上游分支的情况）
+    $remoteBranch = git rev-parse --abbrev-ref --symbolic-full-name \@{upstream} 2>$null
+    
+    if (-not $remoteBranch) {
+        Write-Host "⚠️ 警告：当前分支 '$branch' 未设置上游分支" -ForegroundColor Yellow
+        # 未设置上游分支视为没有未推送提交
+        return $false
+    }
+    Write-Host "$branch, $remoteBranch"
+    # 计算本地领先于远程的提交数量
+    $localCommits = git rev-list $branch --not --remotes --count
+    return [int]$localCommits -gt 0
+}
+
+# 主流程
+Write-Host "`n===== Git 仓库状态检查 =====" -ForegroundColor Cyan
+
+# 检查未提交更改
+if (HasUncommittedChanges) {
+    Write-Host "📝 检测到未提交的更改：" -ForegroundColor Yellow
+    git status -s
+    
+    # 添加所有更改
+    git add -A
+    Write-Host "`n✅ 已添加所有更改到暂存区" -ForegroundColor Green
+    
+    # 获取提交信息
+    $commitMessage = Read-Host "`n💬 请输入提交信息 (按Ctrl+C取消)"
+    
+    if (-not [string]::IsNullOrWhiteSpace($commitMessage)) {
+        # 执行提交
+        git commit -m $commitMessage
+        Write-Host "`n✅ 提交成功！" -ForegroundColor Green
+    } else {
+        Write-Host "❌ 未输入提交信息，取消提交" -ForegroundColor Red
+        exit 2
+    }
 } else {
-    Write-Host "ℹ️ 没有检测到文件更改"
-    exit
+    Write-Host "✅ 工作区干净，没有未提交的更改" -ForegroundColor Green
 }
 
-# 提交更改
-try {
-    git commit -m $CommitMessage
-    Write-Host "✅ 已提交更改: `"$CommitMessage`""
-} catch {
-    Write-Host "❌ 提交失败: $_"
-    exit 1
+# 检查未推送提交
+if (HasUnpushedCommits) {
+    Write-Host "`n🚀 检测到未推送的提交，正在推送..." -ForegroundColor Yellow
+    
+    # 获取当前分支名
+    $branch = git rev-parse --abbrev-ref HEAD
+    
+    # 执行推送
+    git push origin $branch
+    
+    if ($?) {
+        Write-Host "`n✅ 推送成功！" -ForegroundColor Green
+    } else {
+        Write-Host "`n❌ 推送失败！请检查网络连接或远程仓库权限" -ForegroundColor Red
+        exit 3
+    }
+} else {
+    Write-Host "`n✅ 所有提交已同步到远程仓库" -ForegroundColor Green
 }
 
-# 推送到远程仓库
-try {
-    Write-Host "🚀 正在推送到远程仓库 ($currentBranch 分支)..."
-    git push -u origin $currentBranch
-    Write-Host "✅ 推送成功!"
-} catch {
-    Write-Host "❌ 推送失败: $_"
-    exit 1
-}
+Write-Host "`n===== 操作完成 =====" -ForegroundColor Cyan

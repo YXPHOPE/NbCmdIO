@@ -2,4 +2,4 @@
 __pycache__/*
 nbcmdio.egg-info/*
 build/*
-test.py
+test*
