@@ -22,7 +22,7 @@
 - 创建独立更新区域
 - 嵌套区域支持
 
-### ⌨️ 输入捕获（路线图）
+### ⌨️ 输入捕获（...ing）
 - 单键无缓冲读取
 - 快捷键组合检测
 
@@ -40,29 +40,29 @@ from nbcmdio import prt
 def NbCmdIO():
     lavender = "#ccf"
     # 清屏并设置终端标题
-    prt.cls().setTitle('NbCmdIO')
+    prt.cls().setTitle("NbCmdIO")
     # 在第2行 以文字黄色 背景色#ccf  居中显示
     prt[2].fg_yellow().bg_hex(lavender).alignCenter(" NbCmdIO by Cipen ")
-    Width = 40
-    Height = 10
-    centerOffset = (prt.size_col - Width) // 2
+    WIDTH = 40
+    HEIGHT = 10
+    center_offset = (prt.size_col - WIDTH) // 2
     # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
-    prt.fg_hex(lavender)[3,centerOffset].rectangle(Width, Height)
-    prt.fg_blue()[0,3](" NbCmdIO ").bold()[0,Width-8](prt.__version__)
-    b2 = '  '
+    prt.fg_hex(lavender)[3, center_offset].rectangle(WIDTH, HEIGHT)
+    prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
+    b2 = "  "
     # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
     with prt.bg_hex(lavender):
-        prt[1,1](b2)[1,Width-1](b2)
-        prt[Height,1](b2)[Height,Width-1](b2)
+        prt[1, 1](b2)[1, WIDTH - 1](b2)
+        prt[HEIGHT, 1](b2)[HEIGHT, WIDTH - 1](b2)
     # 字符串内添加样式
     line1 = f"Welcome to {prt.bold().bg_hex(lavender).fg_hex('#000')} NbCmdIO "
     line2 = "Print your string colorfully!"
     # 保存并使用样式
-    headStyle = prt.fg_red().bold().makeStyle()
-    prt[1].use(headStyle).alignCenter(line1) # 在新区域第一行使用样式居中显示文本
-    prt[2].use(headStyle).alignCenter(line2)
-    prt[3,3].hline(Width-4)
-    
+    head_style = prt.fg_red().bold().makeStyle()
+    prt[1].use(head_style).alignCenter(line1)  # 在新区域第一行使用样式居中显示文本
+    prt[2].use(head_style).alignCenter(line2)
+    prt[3, 3].fg_grey().hline(WIDTH - 4)
+
     text = r"""
  _____    _____    _______ 
 |  _  \  |  _  \  |__   __|
@@ -79,7 +79,7 @@ def NbCmdIO():
     prt.fg_blue().bold()[4, 25].printLinesInRegion(chr3)
 
     # 光标跳至本区域下一行，结束
-    prt[Height+1].end()
+    prt[HEIGHT + 1].setOriginTerm().end()
 
 NbCmdIO()
 ```

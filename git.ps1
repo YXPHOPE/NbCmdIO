@@ -29,7 +29,7 @@ if (-not (Test-Path ".\.git")) {
 # 函数：检查是否有未提交的更改
 function HasUncommittedChanges {
     $status = git status --porcelain
-    return -not [string]::IsNullOrWhiteSpace($status)
+    return [string]::IsNullOrWhiteSpace($status)
 }
 
 # 函数：检查是否有未推送的提交（修复版）
@@ -37,15 +37,6 @@ function HasUnpushedCommits {
     # 获取当前分支名
     $branch = git rev-parse --abbrev-ref HEAD
     
-    # 获取远程分支名（正确处理未设置上游分支的情况）
-    $remoteBranch = git rev-parse --abbrev-ref --symbolic-full-name \@{upstream} 2>$null
-    
-    if (-not $remoteBranch) {
-        Write-Host "⚠️ 警告：当前分支 '$branch' 未设置上游分支" -ForegroundColor Yellow
-        # 未设置上游分支视为没有未推送提交
-        return $false
-    }
-    Write-Host "$branch, $remoteBranch"
     # 计算本地领先于远程的提交数量
     $localCommits = git rev-list $branch --not --remotes --count
     return [int]$localCommits -gt 0
