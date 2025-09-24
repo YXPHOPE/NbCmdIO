@@ -1,15 +1,16 @@
-# NbCmdIO: 终端色彩与交互的革命者⌨️
+# NbCmdIO: 终端色彩与交互的强大工具
 
 <div align="center">
 
 [![PyPI Version](https://img.shields.io/pypi/v/nbcmdio?style=for-the-badge&logo=pypi)](https://pypi.org/project/nbcmdio/)
-[![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
 [![License](https://img.shields.io/pypi/l/nbcmdio?style=for-the-badge&logo=opensourceinitiative)](https://github.com/YXPHOPE/NbCmdIO/blob/main/LICENSE)
+
+[![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio?style=for-the-badge&logo=python)](https://www.python.org/)
 
-</div>
-
 ![Terminal Art](./assets/NbCmdIO.png)
+
+</div>
 
 **NbCmdIO** 是一个强大的Python库，将普通的命令行终端转变为充满活力的视觉画布和强大的交互平台！告别单调的黑白输出，迎接RGB真彩世界；告别笨重的文本界面，迎接精准的光标控制和输入捕获能力。
 
@@ -63,10 +64,10 @@ def NbCmdIO():
     with prt.bg_hex(lavender):
         prt[1, 1](b2)[1, WIDTH - 1](b2)
         prt[HEIGHT, 1](b2)[HEIGHT, WIDTH - 1](b2)
-    # 字符串内添加样式
+    # 字符串内添加样式（务必：字符单独定义，不要在链式调用里直接打印）
     line1 = f"Welcome to {prt.bold().bg_hex(lavender).fg_hex('#000')} NbCmdIO "
     line2 = "Print your string colorfully!"
-    # 保存并使用样式
+    # 保存并使用样式（样式将包括位置、颜色、效果）
     head_style = prt.fg_red().bold().makeStyle()
     prt[1].use(head_style).alignCenter(line1)  # 在新区域第一行使用样式居中显示文本
     prt[2].use(head_style).alignCenter(line2)
@@ -83,9 +84,9 @@ def NbCmdIO():
     chr1 = [l[:8] for l in lines]
     chr2 = [l[8:18] for l in lines]
     chr3 = [l[18:] for l in lines]
-    prt.fg_red().bold()[4, 8].printLinesInRegion(chr1)
-    prt.fg_green().bold()[4, 16].printLinesInRegion(chr2)
-    prt.fg_blue().bold()[4, 25].printLinesInRegion(chr3)
+    prt.fg_red().bold()[4, 8].printLines(chr1)
+    prt.fg_green().bold()[4, 16].printLines(chr2)
+    prt.fg_blue().bold()[4, 25].printLines(chr3)
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
