@@ -2,10 +2,10 @@
 
 <div align="center">
 
-    [![PyPI Version](https://img.shields.io/pypi/v/nbcmdio?style=for-the-badge&logo=pypi)](https://pypi.org/project/nbcmdio/)
-    [![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
-    [![License](https://img.shields.io/pypi/l/nbcmdio?style=for-the-badge&logo=opensourceinitiative)](https://github.com/YXPHOPE/NbCmdIO/blob/main/LICENSE)
-    [![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio?style=for-the-badge&logo=python)](https://www.python.org/)
+[![PyPI Version](https://img.shields.io/pypi/v/nbcmdio?style=for-the-badge&logo=pypi)](https://pypi.org/project/nbcmdio/)
+[![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
+[![License](https://img.shields.io/pypi/l/nbcmdio?style=for-the-badge&logo=opensourceinitiative)](https://github.com/YXPHOPE/NbCmdIO/blob/main/LICENSE)
+[![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio?style=for-the-badge&logo=python)](https://www.python.org/)
 
 </div>
 
