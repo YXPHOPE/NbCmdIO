@@ -34,7 +34,7 @@ setup(
     version=VERSION,
     author="Cipen",
     author_email="faithyxp@foxmail.com",
-    description="一个在终端中输出色彩斑斓、颜色多样内容以及快捷输入的强大工具。A powerful tool for print colorfully and input quickly in terminal.",
+    description="一个在终端中输出色彩斑斓、颜色多样内容以及快捷输入的强大工具。A powerful tool for outputting colorful content and enabling quick input in the terminal.",
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url="https://github.com/YXPHOPE/NbCmdIO",

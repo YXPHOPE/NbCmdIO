@@ -4,13 +4,6 @@
 # 2. 如果有则添加所有更改并提示输入提交信息
 # 3. 检查本地提交是否已推送
 # 4. 如果有未推送的提交则推送到远程
-param (
-    [Parameter(Mandatory=$false)]
-    [string]$RemoteUrl = "https://github.com/YXPHOPE/NbCmdIO",
-    
-    [Parameter(Mandatory=$true)]
-    [string]$CommitMessage  # 强制要求的提交信息
-)
 
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -29,7 +22,7 @@ if (-not (Test-Path ".\.git")) {
 # 函数：检查是否有未提交的更改
 function HasUncommittedChanges {
     $status = git status --porcelain
-    return [string]::IsNullOrWhiteSpace($status)
+    return -not [string]::IsNullOrWhiteSpace($status)
 }
 
 # 函数：检查是否有未推送的提交（修复版）

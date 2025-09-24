@@ -12,12 +12,12 @@ Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，
 from typing import Any, Union
 from platform import system as getOS
 from os import system, get_terminal_size
-from unicodedata import east_asian_width
 import re
 from .style import Style
 from .input import inp
+from .utils import *
 
-# window cmd 默认禁用ANSI 转义序列，可通过以下3种方法启用
+# window cmd 默认禁用 ANSI 转义序列，可通过以下3种方法启用
 # 1. cls
 # 2. reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1
 # 3. kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
@@ -36,7 +36,7 @@ class Output:
     OSC = "\033]"
     RESET = "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.3"
+    __version__ = "1.8.4"
 
     def __init__(self, auto_reset=True) -> None:
         self.auto_reset = auto_reset
@@ -51,6 +51,7 @@ class Output:
         self.__col = 1
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
+        self.__acmlt = "mHG" # 样式累积类型
 
         os = getOS()
         if os == "Windows":
@@ -88,6 +89,7 @@ class Output:
 
     def reset(self):
         """重置所有样式"""
+        # ? 是否先self.csi("0m")，再self.__str = ""，这样获取样式时就不会有开头的先自动重置
         self.__str = ""
         return self.csi("0m")
 
@@ -112,7 +114,10 @@ class Output:
 
     def csi(self, s: str, *args):
         s = self.CSI + s
-        self.__str += s
+        if s[-1] in self.__acmlt:
+            self.__str += s
+        else:
+            self.__str = ''
         print(s, end="")
         if args:
             self.print(*args)
@@ -210,9 +215,8 @@ class Output:
             row, col = key
             return self.loc(row, col)
         elif isinstance(key, int):
-            return self.loc(
-                key, 0
-            )  # col的默认值0、1对原始终端无影响，但对自己设定的origin有影响
+            # col的默认值0、1对原始终端无影响，但对自己设定的origin有影响
+            return self.loc(key, 0)
         else:
             raise TypeError("Location index must be [row, col].")
 
@@ -239,12 +243,13 @@ class Output:
         return self.col(0)
 
     def getLoc(self):
+        """获取当前光标位置（相对设定的原点） -> (row, col)"""
         print(self.CSI + "6n", end="", flush=True)
         res = inp.get_str()
         match = re.match(r"^\x1b\[(\d+);(\d+)R", res)
         if match:
-            row = int(match.group(1))
-            col = int(match.group(2))
+            row = int(match.group(1)) - self.origin_row
+            col = int(match.group(2)) - self.origin_col
             return row, col
         else:
             raise ValueError(f"无法解析响应: {res!r}")
@@ -385,8 +390,12 @@ class Output:
         return self.fg_hex(hex, 1)
 
     def __str__(self):
+        """提取出已设置的样式，并重置样式
+        - 包括reset后的 位置、颜色、效果 等所有再次reset前累积的样式
+        - 连接在字符串中时，请单独定义且先reset，不要在链式调用里直接打印，否则会加上前面链式调用的样式
+        - 建议优先使用Style中的常量"""
         s = self.__str
-        self.__str = ""
+        self.reset()
         return s
 
     def makeStyle(
@@ -400,7 +409,6 @@ class Output:
     ) -> Style:
         """
         ### 生成Style样式类
-        #### 参数
         - fg_color: 前景色，可rgb、hex
         - bg_color: 前景色，可rgb、hex
         - bold: bool=False 是否加粗
@@ -408,6 +416,7 @@ class Output:
         - underline: bool=False 是否下划线
         - strike: bool=False 是否删除线
         #### 参数无有效样式时使用前面积累的self.__str作为样式
+        - 积累包括loc、效果、前景、背景色的样式，建议先reset()
         """
         sty = self.CSI
         if bold: sty += "1;"
@@ -461,27 +470,21 @@ class Output:
         return self.col(offset)
 
     def alignCenter(self, s: str):
-        """使文本居中对齐显示"""
-        return self.gotoCenterOffset(self.getStringWidth(s))(s)
+        """使文本居中对齐显示
+        - 请勿包含 \\t \\n 等特殊字符"""
+        return self.gotoCenterOffset(getStringWidth(s))(s)
 
     def alignRight(self, s: str, col=-1):
-        """
-        ### 使文本右对齐
+        """使文本右对齐
         - col: -1: 默认方形最右侧对齐，其他：不占用该格，前一格处右对齐"""
         if col > 0:
             col += self.origin_col
         else:
             col = self.origin_col + self.width + 1
-        offset = col - self.getStringWidth(s)
+        offset = col - getStringWidth(s)
         if offset < 0:
             offset = 0
         return self.col(offset)(s)
-
-    def getStringWidth(self, s: str):
-        """返回字符串去除CSI转义序列、\n、\t后的显示长度"""
-        raw = re.sub(r"\033\[[\d;\?]*\w", "", s)  # 去除csi转义序列
-        raw = re.sub(r"[\n\t]", "", raw)
-        return sum(2 if east_asian_width(c) in ("F", "W", "A") else 1 for c in raw)
 
     def setOrigin(self, row: int, col: int, width=0, height=0, base=0):
         """
@@ -543,15 +546,51 @@ class Output:
         self.auto_reset = reset
         return self[1, 1]
 
-    def printLinesInRegion(self, lines: Union[str, list[str]], row=-1, col=-1):
-        """在给定坐标处左对齐显示多行文本，不给定则使用上一次设定的位置"""
+    def printLines(self, lines: Union[str, list[str]], width=0, row=-1, col=-1):
+        """在给定坐标处左对齐显示多行文本（直接打印多行文本会使后面的行回到终端最左侧）
+        - lines: str | list[str], str会自动被splitlines
+        - width: lines为str时生效，换行分割宽度（自身换行符处也会被分割，请勿包含\\t）\n
+              未指定则按str中的换行符分割
+        - row、col: 行、列位置，未给定则使用上一次设定的位置
+
+        注：每行宽度请勿超过该位置终端剩余宽度，确保终端剩余高度超过行数"""
         if row < 0 or col < 0:
             row = self.__row
             col = self.__col
         if isinstance(lines, str):
-            lines = lines.splitlines()
+            if width:
+                if "\t" in lines:
+                    # self.log()
+                    pass
+                max_width = self.size_col - col - self.origin_col
+                if width > max_width: width = max_width
+                res, csi = [], [] # 结果str，转义序列位置
+                line, lwidth, i= "", 0, 0
+                for match in re.finditer(r'\033\[[\d;\?]*[a-zA-Z]', lines):
+                    csi.append(match.span())
+                while i < len(lines):
+                    chr = lines[i]
+                    if csi and csi[0][0]==i:
+                        i = csi[0][1]
+                        line += lines[csi[0][0]:csi[0][1]]
+                        csi.pop(0)
+                        continue
+                    if chr!='\n':
+                        line += chr
+                        lwidth += getCharWidth(chr)
+                    if lwidth >= width or chr == '\n':
+                        # ? 如果只剩1宽度，加入一个双宽字符，会溢出1宽度
+                        res.append(line)
+                        line = ""
+                        lwidth = 0
+                    i += 1
+                if line: res.append(line)
+                lines = res
+            else:
+                lines = lines.splitlines()
         for i in range(len(lines)):
-            self[i + row, col].p(lines[i])
+            # row超过终端高度会在最后一行打印，使用换行可产生新行，但其他坐标位置也都相对变化了
+            self[i+row, col].p(lines[i])
         return self.print()
 
     # with上下文管理
@@ -569,11 +608,12 @@ class Output:
     # 日志记录
     # def log(self):
     #     pass
+    # def logError(self, s, time=True, trace=True)
 
     def test(self):
-        """测试终端能显示的指令\033[0-99m"""
+        """测试终端能显示的指令\033[0-109m"""
         n = 0
-        for i in range(10):
+        for i in [0,2,3,4,9,10]:
             for j in range(10):
                 n = (10 * i) + j
                 print("\033[%dm  %3d  \033[0m" % (n, n), end="")
@@ -600,10 +640,10 @@ def NbCmdIO():
     with prt.bg_hex(lavender):
         prt[1, 1](b2)[1, WIDTH - 1](b2)
         prt[HEIGHT, 1](b2)[HEIGHT, WIDTH - 1](b2)
-    # 字符串内添加样式
+    # 字符串内添加样式（务必：字符单独定义，不要在链式调用里直接打印）
     line1 = f"Welcome to {prt.bold().bg_hex(lavender).fg_hex('#000')} NbCmdIO "
     line2 = "Print your string colorfully!"
-    # 保存并使用样式
+    # 保存并使用样式（样式将包括位置、颜色、效果）
     head_style = prt.fg_red().bold().makeStyle()
     prt[1].use(head_style).alignCenter(line1)  # 在新区域第一行使用样式居中显示文本
     prt[2].use(head_style).alignCenter(line2)
@@ -620,9 +660,10 @@ def NbCmdIO():
     chr1 = [l[:8] for l in lines]
     chr2 = [l[8:18] for l in lines]
     chr3 = [l[18:] for l in lines]
-    prt.fg_red().bold()[4, 8].printLinesInRegion(chr1)
-    prt.fg_green().bold()[4, 16].printLinesInRegion(chr2)
-    prt.fg_blue().bold()[4, 25].printLinesInRegion(chr3)
+    prt.fg_red().bold()[4, 8].printLines(chr1)
+    prt.fg_green().bold()[4, 16].printLines(chr2)
+    prt.fg_blue().bold()[4, 25].printLines(chr3)
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
+    prt.test()

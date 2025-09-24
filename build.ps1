@@ -15,7 +15,14 @@ Set-Location -Path $scriptPath
 Remove-Item -Recurse -Force build, dist, *.egg-info -ErrorAction SilentlyContinue
 
 # 安装依赖
-python -m pip install --upgrade pip setuptools wheel
+$pipList = python -m pip list --format=json 2>$null
+$packages = @('setuptools', 'wheel')
+foreach ($package in $packages) {
+  if(-not $pipList -match $package){
+    Write-Host "$package 正在安装..."
+    pip install $package
+  }
+}
 
 # 构建源码包和wheel包
 python setup.py sdist bdist_wheel

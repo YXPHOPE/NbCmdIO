@@ -1,5 +1,14 @@
 # NbCmdIO: 终端色彩与交互的革命者⌨️
 
+<div align="center">
+
+    [![PyPI Version](https://img.shields.io/pypi/v/nbcmdio?style=for-the-badge&logo=pypi)](https://pypi.org/project/nbcmdio/)
+    [![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
+    [![License](https://img.shields.io/pypi/l/nbcmdio?style=for-the-badge&logo=opensourceinitiative)](https://github.com/YXPHOPE/NbCmdIO/blob/main/LICENSE)
+    [![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio?style=for-the-badge&logo=python)](https://www.python.org/)
+
+</div>
+
 ![Terminal Art](./assets/NbCmdIO.png)
 
 **NbCmdIO** 是一个强大的Python库，将普通的命令行终端转变为充满活力的视觉画布和强大的交互平台！告别单调的黑白输出，迎接RGB真彩世界；告别笨重的文本界面，迎接精准的光标控制和输入捕获能力。
@@ -117,7 +126,9 @@ pip install nbcmdio
 
 ---
 
-[![PyPI Version](https://img.shields.io/pypi/v/nbcmdio)](https://pypi.org/project/nbcmdio/)
-[![Downloads](https://img.shields.io/pypi/dm/nbcmdio)](https://pypi.org/project/nbcmdio/)
-[![License](https://img.shields.io/pypi/l/nbcmdio)](https://opensource.org/licenses/MIT)
-[![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio)](https://pypi.org/project/nbcmdio/)
+## 📜 更新日志
+
+- 1.8.1 完成Output的所有基本功能，一次性更新
+- 1.8.2 初开Input的单键无缓冲读取功能
+- 1.8.3 修复部分问题，添加快捷ps1批处理文件，分离style
+- 1.8.4 添加多行区域打印，分离utils

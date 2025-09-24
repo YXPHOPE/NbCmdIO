@@ -1,20 +1,28 @@
 
 class Style:
-    RESET = '\033[0m'
+    RESET = "\033[0m"
+
     def __init__(self, style: str) -> None:
         self.style = style
+
     def __str__(self) -> str:
         return self.style
+
     def __add__(self, other):
-        return self.style+other
+        return self.style + other
+
     def __radd__(self, other):
-        return other+self.style
+        return other + self.style
+
     def __call__(self, *args, **kwds):
-        print(self.style,end="")
-        print(*args,**kwds)
+        if "end" not in kwds:
+            kwds["end"] = ""
+        print(self.style, end="")
+        print(*args, **kwds)
         print(self.RESET, end="")
+
     def reset(self):
-        print(self.RESET,end="")
+        print(self.RESET, end="")
 
 
 CSI = "\033["
