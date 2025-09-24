@@ -564,28 +564,7 @@ class Output:
                     pass
                 max_width = self.size_col - col - self.origin_col
                 if width > max_width: width = max_width
-                res, csi = [], [] # 结果str，转义序列位置
-                line, lwidth, i= "", 0, 0
-                for match in re.finditer(r'\033\[[\d;\?]*[a-zA-Z]', lines):
-                    csi.append(match.span())
-                while i < len(lines):
-                    chr = lines[i]
-                    if csi and csi[0][0]==i:
-                        i = csi[0][1]
-                        line += lines[csi[0][0]:csi[0][1]]
-                        csi.pop(0)
-                        continue
-                    if chr!='\n':
-                        line += chr
-                        lwidth += getCharWidth(chr)
-                    if lwidth >= width or chr == '\n':
-                        # ? 如果只剩1宽度，加入一个双宽字符，会溢出1宽度
-                        res.append(line)
-                        line = ""
-                        lwidth = 0
-                    i += 1
-                if line: res.append(line)
-                lines = res
+                lines = splitLinesByWidth(lines, width)
             else:
                 lines = lines.splitlines()
         for i in range(len(lines)):
