@@ -8,7 +8,7 @@
 [![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio?style=for-the-badge&logo=python)](https://www.python.org/)
 
-![Terminal Art](./assets/NbCmdIO.png)
+<img src="./assets/NbCmdIO.png" alt="Terminal Art" onerror="this.src='https://github.com/YXPHOPE/NbCmdIO/blob/main/assets/NbCmdIO.png'">
 
 </div>
 
@@ -139,3 +139,4 @@ pip install nbcmdio
 - 1.8.2 初开Input的单键无缓冲读取功能
 - 1.8.3 修复部分问题，添加快捷ps1批处理文件，分离style
 - 1.8.4 添加多行区域打印，分离utils
+- 1.8.5 feat: drawHGrad(渐变), drawIMG(终端显示图片)
