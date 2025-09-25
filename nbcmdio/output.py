@@ -9,11 +9,13 @@ Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，
 - [x] 完成跨平台的getLoc函数
 """
 
+
+import re
+from sys import stdout
 from typing import Any, Union
 from platform import system as getOS
 from os import system, get_terminal_size
-import re
-from .style import Style
+from .style import Style, fg_rgb, bg_rgb
 from .input import inp
 from .utils import *
 
@@ -23,35 +25,35 @@ from .utils import *
 # 3. kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
 
-RGB = Union[list[int], tuple[int, int, int]]
-
 class Output:
-    """
-    ### 输出类Output()
+    """### 输出类Output()
     - 终端色彩：fg_rgb()、bg_hex() 等设定任意前景、背景色，内置bold()、fg_red()等
     - 光标定位：[row, col] 即可定位到指定位置并供其他函数默认使用该位置，setOrigin()设定新原点，^ | << >> 上下左右
     - 链式调用：bold().fg_red()\\[2,3]("text")
-    - 自动重置：所有函数内部样式一致，外部根据auto_reset值决定是否自动重置样式，p()、with上下文不重置样式"""
+    - 自动重置：所有函数内部样式一致，外部根据auto_reset值决定是否自动重置样式，p()、with上下文不重置样式
+
+    注：许多方法末尾的self.print()不是打印换行，而是根据autoreset自动重置样式"""
+
     CSI = "\033["
     OSC = "\033]"
     RESET = "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.4"
+    __version__ = "1.8.5"
 
     def __init__(self, auto_reset=True) -> None:
         self.auto_reset = auto_reset
         self.size_row = 0
         self.size_col = 0
-        self.getSize()
         self.origin_row = 0
         self.origin_col = 0
-        self.width = self.size_col
-        self.height = self.size_row
+        self.width = 0
+        self.height = 0
+        self.getSize()
         self.__row = 1
         self.__col = 1
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
-        self.__acmlt = "mHG" # 样式累积类型
+        self.__acmlt = "mHG"  # 样式累积类型
 
         os = getOS()
         if os == "Windows":
@@ -68,7 +70,7 @@ class Output:
             self.__cls = "clear"
 
     def setTitle(self, title: str):
-        print(f"\033]2;{title}\a", end="")
+        stdout.write(f"\033]2;{title}\a")
         return self
 
     # 清除相关
@@ -106,10 +108,10 @@ class Output:
             self.col(col)
         return self.csi("K")
 
-    def end(self):
+    def end(self, nl = 1):
         """重置颜色，并打印换行结尾"""
         self.reset()
-        print("\n", end="")
+        stdout.write("\n" * nl)
         return self
 
     def csi(self, s: str, *args):
@@ -117,8 +119,8 @@ class Output:
         if s[-1] in self.__acmlt:
             self.__str += s
         else:
-            self.__str = ''
-        print(s, end="")
+            self.__str = ""
+        stdout.write(s)
         if args:
             self.print(*args)
         return self
@@ -127,22 +129,20 @@ class Output:
     def __call__(self, *args: Any, **kwds: Any):
         return self.print(*args, **kwds)
 
-    def print(self, *args:Any, **kwds:Any):
-        """
-        ### 以已加载样式输出所有内容
+    def print(self, *args: Any, **kwds: Any):
+        """### 以已加载样式输出所有内容
         - 默认end=""
         - 将会清除self.__str中保存的样式
-        - 默认自动reset重置样式
-        """
+        - 默认自动reset重置样式"""
         if "end" not in kwds:
             kwds["end"] = ""
         self.__str = ""
         print(*args, **kwds)
         return self.reset() if self.auto_reset else self
-    
-    def p(self, *args):
-        """ 不重置样式的输出 """
-        print(*args, end="")
+
+    def p(self, s: str):
+        """不重置样式的输出"""
+        stdout.write(s)
         return self
 
     def autoResetOn(self):
@@ -222,12 +222,10 @@ class Output:
 
     # 绝对定位
     def loc(self, row: int, col=0):
-        """
-        ### 光标定位到 row,col\n
+        """### 光标定位到 row,col\n
         - col: 0 by default
         - 左上角为 1,1
-        - 基于set_origin设置的新坐标原点
-        """
+        - 基于set_origin设置的新坐标原点"""
         self.__row = row
         self.__col = col
         row += self.origin_row
@@ -346,10 +344,8 @@ class Output:
 
     # 任意颜色
     def fg_rgb(self, rgb: RGB, bg: Union[bool, int] = False):
-        """
-        ### 设置前景文字rgb颜色
-        rgb: [0,128,255]
-        """
+        """### 设置前景文字rgb颜色
+        rgb: [0,128,255]"""
         err = "Argument rgb needs a list or a tuple, len=3, value between 0~255"
         if not rgb.__len__:
             raise TypeError(err)
@@ -359,41 +355,25 @@ class Output:
         return self.csi(f"{bf}8;2;{rgb[0]};{rgb[1]};{rgb[2]}m")
 
     def bg_rgb(self, rgb: RGB):
-        """
-        ### 设置背景rgb颜色
-        rgb: [0,128,255]
-        """
+        """### 设置背景rgb颜色
+        rgb: [0,128,255]"""
         return self.fg_rgb(rgb, 1)
 
-    def fg_hex(self, hex: str, bg: Union[bool, int] = False):
-        """
-        ### 设置前景文字hex颜色
-        hex: 0F0, #CCF, 008AFF, #CCCCFF
-        """
-        if hex[0] == "#":
-            hex = hex[1:]
-        hexes = []
-        if len(hex) == 6:
-            hexes = [hex[:2], hex[2:4], hex[4:]]
-        elif len(hex) == 3:
-            hexes = [hex[:1] * 2, hex[1:2] * 2, hex[2:] * 2]
-        else:
-            raise ValueError("Hex color should be like #F0F or #00FFFF")
-        rgb = [int(i, 16) for i in hexes]
-        return self.fg_rgb(rgb, bg)
+    def fg_hex(self, hex: str):
+        """### 设置前景文字hex颜色
+        hex: 0F0, #CCF, 008AFF, #CCCCFF"""
+        return self.fg_rgb(hex2RGB(hex))
 
     def bg_hex(self, hex: str):
-        """
-        ### 设置背景hex颜色
-        hex: 0F0, #CCF, 008AFF, #CCCCFF
-        """
-        return self.fg_hex(hex, 1)
+        """### 设置背景hex颜色
+        hex: 0F0, #CCF, 008AFF, #CCCCFF"""
+        return self.bg_rgb(hex2RGB(hex))
 
     def __str__(self):
         """提取出已设置的样式，并重置样式
         - 包括reset后的 位置、颜色、效果 等所有再次reset前累积的样式
         - 连接在字符串中时，请单独定义且先reset，不要在链式调用里直接打印，否则会加上前面链式调用的样式
-        - 建议优先使用Style中的常量"""
+        - 建议优先使用Style中的常量、方法"""
         s = self.__str
         self.reset()
         return s
@@ -404,7 +384,7 @@ class Output:
         bg_color: Union[list, tuple[int, int, int], str] = "",
         bold=False,
         italics=False,
-        undefline=False,
+        underline=False,
         strike=False,
     ) -> Style:
         """
@@ -421,7 +401,7 @@ class Output:
         sty = self.CSI
         if bold: sty += "1;"
         if italics: sty += "3;"
-        if undefline: sty += "4;"
+        if underline: sty += "4;"
         if strike: sty += "9;"
         if sty != self.CSI: sty = sty[:-1] + "m"
         else: sty = ""
@@ -445,7 +425,7 @@ class Output:
 
     def use(self, style: Style):
         """使用Style样式"""
-        print(str(style), end="")
+        stdout.write(str(style))
         return self
 
     def getSize(self):
@@ -454,6 +434,8 @@ class Output:
             size = get_terminal_size()
             self.size_col = columns = size.columns
             self.size_row = rows = size.lines
+            self.width = self.size_col - self.origin_col
+            self.height = self.size_row - self.origin_row
         except OSError:
             return 30, 120
         return rows, columns
@@ -487,11 +469,9 @@ class Output:
         return self.col(offset)(s)
 
     def setOrigin(self, row: int, col: int, width=0, height=0, base=0):
-        """
-        ### 设定新的坐标原点与宽高
+        """### 设定新的坐标原点与宽高
         - width, height：未设定则使用终端剩余所有大小
-        - base: 0基于Terminal左上角，1基于当前origin位置
-        """
+        - base: 0基于Terminal左上角，1基于当前origin位置"""
         if base:
             row += self.origin_row
             col += self.origin_col
@@ -512,35 +492,38 @@ class Output:
         self.height = self.size_row
         return self
 
-    def hline(self, length: int, row=-1, col=-1, mark="─"):
+    def drawNL(self, nline=1):
+        """打印 nline=1 个新行"""
+        stdout.write("\n" * nline)
+        return self
+
+    def drawHLine(self, length: int, row=-1, col=-1, mark="─"):
         """在给定位置/光标当前位置生成给定长度的**横线**"""
         if row >= 0 and col >= 0:
             self[row, col]
         self(mark * length)
         return self
 
-    def vline(self, length: int, row=-1, col=-1, mark="│"):
+    def drawVLine(self, length: int, row=-1, col=-1, mark="│"):
         """在给定位置/之前设定位置生成给定长度的**竖线**"""
         if row < 0 or col < 0:
-            row = self.__row
-            col = self.__col
+            row, col = self.__row, self.__col
         for i in range(length):
             self[row + i, col].p(mark)
         return self.print()
 
-    def rectangle(self, width: int, height: int, row=-1, col=-1, as_origin=True):
+    def drawRect(self, width: int, height: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
         if row < 0 or col < 0:
-            row = self.__row
-            col = self.__col
+            row, col = self.__row, self.__col
         if as_origin:
             self.setOrigin(row, col, width, height)
             row = col = 0
         reset = self.auto_reset
         self.autoResetOff()
-        self[row, col]("┌").hline(width)("┐")
-        self[row + 1, col].vline(height)[row + 1, col + width + 1].vline(height)
-        self[row + height + 1, col]("└").hline(width)("┘")
+        self[row, col]("┌").drawHLine(width)("┐")
+        self[row + 1, col].drawVLine(height)[row + 1, col + width + 1].drawVLine(height)
+        self[row + height + 1, col]("└").drawHLine(width)("┘")
         if reset:
             self.reset()
         self.auto_reset = reset
@@ -555,21 +538,74 @@ class Output:
 
         注：每行宽度请勿超过该位置终端剩余宽度，确保终端剩余高度超过行数"""
         if row < 0 or col < 0:
-            row = self.__row
-            col = self.__col
+            row, col = self.__row, self.__col
         if isinstance(lines, str):
             if width:
                 if "\t" in lines:
                     # self.log()
                     pass
                 max_width = self.size_col - col - self.origin_col
-                if width > max_width: width = max_width
+                if width > max_width:
+                    width = max_width
                 lines = splitLinesByWidth(lines, width)
             else:
                 lines = lines.splitlines()
         for i in range(len(lines)):
             # row超过终端高度会在最后一行打印，使用换行可产生新行，但其他坐标位置也都相对变化了
-            self[i+row, col].p(lines[i])
+            self[i + row, col].p(lines[i])
+        return self.print()
+
+    def drawHGrad(self, color_start: RGB, color_end: RGB, length=0, string="", row=-1, col=-1):
+        """产生一条给定长度的水平渐变色带，并回到起始点以供打印
+        - 至少提供 length、string 中的一个
+        - string中的双宽字符会占据两个宽度，但只有一个色块"""
+        if not length:
+            length = getStringWidth(string)
+        if not string:
+            string = " " * length
+        string = padString(string, length)
+        if not length:
+            raise ValueError("Parameter length and string are missed.")
+        gradient = genGradient(color_start, color_end, length)
+        if row >= 0 and col >= 0:
+            self[row, col]
+        i, n_wc, is_wc, line = 0, 0, False, ""
+        while i < length:
+            if is_wc:
+                i += 1
+                is_wc = False
+                continue
+            chr = string[i - n_wc]
+            line += bg_rgb(gradient[i]) + chr
+            if getCharWidth(chr) == 2:
+                n_wc += 1
+                is_wc = True
+            i += 1
+        return self(line)
+
+    def drawIMG(self, img_path: str, row=-1, col=-1, width=0):
+        """### 在终端绘制图片
+        - img_path: 图片路径
+        - row, col: 起始位置(默认使用当前光标位置)
+        - width: 最大宽度(字符数，0表示自动)"""
+        if row < 0 or col < 0:
+            row = self.__row
+            col = self.__col
+        self.getSize()
+        width = width or self.width - col
+        img = getIMG(img_path, width)
+        width, height = img.size
+        pixels = img.load()
+        # 定位光标
+        for y in range(0, height, 2):  # 每两行一组
+            line = ""
+            for x in range(width):
+                # 获取上下两个像素
+                upper = bg_rgb(pixels[x, y])
+                lower = fg_rgb(pixels[x, y + 1])
+                # 使用Unicode上半个字符和下半个字符
+                line += upper + lower + "▄"
+            self.col(col)(line).end()
         return self.print()
 
     # with上下文管理
@@ -592,11 +628,13 @@ class Output:
     def test(self):
         """测试终端能显示的指令\033[0-109m"""
         n = 0
-        for i in [0,2,3,4,9,10]:
+        for i in [0, 2, 3, 4, 9, 10]:
+            line = ""
             for j in range(10):
                 n = (10 * i) + j
-                print("\033[%dm  %3d  \033[0m" % (n, n), end="")
-            print()
+                line += "\033[%dm  %3d  \033[0m" % (n, n)
+            self.alignCenter(line + "\n")
+        return self
 
 
 prt = Output()
@@ -606,13 +644,15 @@ def NbCmdIO():
     lavender = "#ccf"
     # 清屏并设置终端标题
     prt.cls().setTitle("NbCmdIO")
-    # 在第2行 以文字黄色 背景色#ccf  居中显示
-    prt[2].fg_yellow().bg_hex(lavender).alignCenter(" NbCmdIO by Cipen ")
+    # 在第2行 加粗 文字蓝色 居中显示  背景色渐变
+    title = "        NbCmdIO  by  Cipen        "
+    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title))
+    prt.drawHGrad((230, 92, 0), (249, 212, 35), string=title)
     WIDTH = 40
     HEIGHT = 10
     center_offset = (prt.size_col - WIDTH) // 2
     # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
-    prt.fg_hex(lavender)[3, center_offset].rectangle(WIDTH, HEIGHT)
+    prt.fg_hex(lavender)[3, center_offset].drawRect(WIDTH, HEIGHT)
     prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
     b2 = "  "
     # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
@@ -626,7 +666,7 @@ def NbCmdIO():
     head_style = prt.fg_red().bold().makeStyle()
     prt[1].use(head_style).alignCenter(line1)  # 在新区域第一行使用样式居中显示文本
     prt[2].use(head_style).alignCenter(line2)
-    prt[3, 3].fg_grey().hline(WIDTH - 4)
+    prt[3, 3].fg_grey().drawHLine(WIDTH - 4)
 
     text = r"""
  _____    _____    _______ 
@@ -645,4 +685,7 @@ def NbCmdIO():
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
-    prt.test()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((34, 225, 255), (98, 94, 177), 70).end(2)
+    prt.test().end()

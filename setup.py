@@ -2,7 +2,7 @@ import re
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.8.4"
+VERSION = "1.8.5"
 
 
 def replaceFile(filename, pattern, repl):
@@ -24,9 +24,7 @@ os.chdir(os.path.dirname(__file__))
 
 # 更新版本号
 replaceFile("nbcmdio/__init__.py", r'__version__ = ".*"', f'__version__ = "{VERSION}"')
-content = replaceFile(
-    "nbcmdio/output.py", r'__version__ = ".*"', f'__version__ = "{VERSION}"'
-)
+content = replaceFile("nbcmdio/output.py", r'__version__ = ".*"', f'__version__ = "{VERSION}"')
 
 # 更新readme中的示例
 pat = ("def NbCmdIO", "end()")

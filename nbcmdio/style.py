@@ -1,6 +1,12 @@
+from typing import Union
+from .utils import hex2RGB
+
+RGB = Union[list[int], tuple[int, int, int]]
+
 
 class Style:
     RESET = "\033[0m"
+    CSI = "\033["
 
     def __init__(self, style: str) -> None:
         self.style = style
@@ -49,3 +55,34 @@ FG_CYAN = Style(CSI + "36m")
 BG_CYAN = Style(CSI + "46m")
 FG_WHITE = Style(CSI + "37m")
 BG_WHITE = Style(CSI + "47m")
+
+
+# 高频的I/O操作性能影响大，建议先连接所有的转义序列字符串再输出
+def fg_rgb(rgb: RGB, bg: Union[bool, int] = False):
+    """设置前景文字rgb颜色
+    rgb: [0,128,255]"""
+    err = "Argument rgb needs a list or a tuple, len=3, value between 0~255"
+    if not rgb.__len__:
+        raise TypeError(err)
+    if len(rgb) != 3:
+        raise ValueError(err)
+    bf = "4" if bg else "3"
+    return CSI + f"{bf}8;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
+
+
+def bg_rgb(rgb: RGB):
+    """设置背景rgb颜色
+    rgb: [0,128,255]"""
+    return fg_rgb(rgb, 1)
+
+
+def fg_hex(hex: str):
+    """设置前景文字hex颜色
+    hex: 0F0, #CCF, 008AFF, #CCCCFF"""
+    return fg_rgb(hex2RGB(hex))
+
+
+def bg_hex(hex: str):
+    """设置背景hex颜色
+    hex: 0F0, #CCF, 008AFF, #CCCCFF"""
+    return bg_rgb(hex2RGB(hex))

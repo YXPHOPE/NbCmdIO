@@ -51,13 +51,15 @@ def NbCmdIO():
     lavender = "#ccf"
     # 清屏并设置终端标题
     prt.cls().setTitle("NbCmdIO")
-    # 在第2行 以文字黄色 背景色#ccf  居中显示
-    prt[2].fg_yellow().bg_hex(lavender).alignCenter(" NbCmdIO by Cipen ")
+    # 在第2行 加粗 文字蓝色 居中显示  背景色渐变
+    title = "        NbCmdIO  by  Cipen        "
+    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title))
+    prt.drawHGrad((230, 92, 0), (249, 212, 35), string=title)
     WIDTH = 40
     HEIGHT = 10
     center_offset = (prt.size_col - WIDTH) // 2
     # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
-    prt.fg_hex(lavender)[3, center_offset].rectangle(WIDTH, HEIGHT)
+    prt.fg_hex(lavender)[3, center_offset].drawRect(WIDTH, HEIGHT)
     prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
     b2 = "  "
     # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
@@ -71,7 +73,7 @@ def NbCmdIO():
     head_style = prt.fg_red().bold().makeStyle()
     prt[1].use(head_style).alignCenter(line1)  # 在新区域第一行使用样式居中显示文本
     prt[2].use(head_style).alignCenter(line2)
-    prt[3, 3].fg_grey().hline(WIDTH - 4)
+    prt[3, 3].fg_grey().drawHLine(WIDTH - 4)
 
     text = r"""
  _____    _____    _______ 
@@ -90,6 +92,10 @@ def NbCmdIO():
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((34, 225, 255), (98, 94, 177), 70).end(2)
+    prt.test().end()
 
 NbCmdIO()
 ```
