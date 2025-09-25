@@ -17,12 +17,17 @@
 ## 🌟 核心功能亮点
 
 ### ⚡ 支持链式调用
-- 随时随地，设置光标位置、样式，方便快捷、清晰易读！ `prt[row, col].bold("text")`
+- 随时随地，设置光标位置、样式，方便快捷、清晰易读！
+```python
+prt[row, col].bold().fg_red("text")
+```
 
 ### 🎨 真彩RGB终端着色
 - 支持以RGB、HEX格式设定前景色、背景色
 - 支持默认颜色：Black、Red、Green等
 - 支持Bold、Underline、Italics等效果
+- 真彩显示图片，单字符显示两个像素点大大提升分辨率
+![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
 
 ### 🖱️ 像素级光标控制
 - 精确到字符的光标定位
