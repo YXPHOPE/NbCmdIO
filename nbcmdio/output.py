@@ -34,23 +34,17 @@ class Output:
 
     注：许多方法末尾的self.print()不是打印换行，而是根据autoreset自动重置样式"""
 
-    CSI = "\033["
-    OSC = "\033]"
-    RESET = "\033[0m"
+    CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
     __version__ = "1.8.5"
 
     def __init__(self, auto_reset=True) -> None:
         self.auto_reset = auto_reset
-        self.size_row = 0
-        self.size_col = 0
-        self.origin_row = 0
-        self.origin_col = 0
-        self.width = 0
-        self.height = 0
+        self.size_row, self.size_col = 0, 0
+        self.origin_row, self.origin_col = 0, 0
+        self.width, self.height = 0, 0
         self.getSize()
-        self.__row = 1
-        self.__col = 1
+        self.__row, self.__col = 1, 1
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
         self.__acmlt = "mHG"  # 样式累积类型
@@ -226,8 +220,7 @@ class Output:
         - col: 0 by default
         - 左上角为 1,1
         - 基于set_origin设置的新坐标原点"""
-        self.__row = row
-        self.__col = col
+        self.__row, self.__col = row, col
         row += self.origin_row
         col += self.origin_col
         return self.csi(f"{row};{col}H")
@@ -572,14 +565,12 @@ class Output:
         i, n_wc, is_wc, line = 0, 0, False, ""
         while i < length:
             if is_wc:
-                i += 1
-                is_wc = False
+                i, is_wc = i + 1, False
                 continue
             chr = string[i - n_wc]
             line += bg_rgb(gradient[i]) + chr
             if getCharWidth(chr) == 2:
-                n_wc += 1
-                is_wc = True
+                n_wc, is_wc = n_wc + 1, True
             i += 1
         return self(line)
 
@@ -609,10 +600,11 @@ class Output:
             - BICUBIC = 3
             - LANCZOS = 1"""
         if row < 0 or col < 0:
-            row = self.__row
-            col = self.__col
+            row, col = self.__row, self.__col
         self.getSize()
-        width = width or self.width - col
+        max_width = self.width - col
+        if width==0 or width>max_width:
+            width = max_width
         img = getIMG(img_path, width, resample)
         width, height = img.size
         pixels = img.load()
