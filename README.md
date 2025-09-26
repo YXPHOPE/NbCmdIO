@@ -8,7 +8,7 @@
 [![Downloads](https://img.shields.io/pypi/dm/nbcmdio?style=for-the-badge&logo=hono)](https://pypi.org/project/nbcmdio/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/nbcmdio?style=for-the-badge&logo=python)](https://www.python.org/)
 
-<img src="./assets/NbCmdIO.png" alt="Terminal Art" onerror="this.src='https://github.com/YXPHOPE/NbCmdIO/blob/main/assets/NbCmdIO.png'">
+![Terminal Art](./assets/NbCmdIO.png)
 
 </div>
 

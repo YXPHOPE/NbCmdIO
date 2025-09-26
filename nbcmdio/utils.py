@@ -133,7 +133,7 @@ def genGradient(color_start, color_end, num):
     return gradient
 
 
-def getIMG(img_path:str, width:int):
+def getIMG(img_path:str, width:int, resample=1):
     try:
         img = Image.open(img_path)
     except Exception as e:
@@ -146,7 +146,7 @@ def getIMG(img_path:str, width:int):
     if new_height % 2:
         new_height += 1
     # 缩放图片
-    img = img.resize((new_width, new_height), 1)
+    img = img.resize((new_width, new_height), resample)
     img = img.convert("RGB")
     return img
 

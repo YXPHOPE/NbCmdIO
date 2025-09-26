@@ -556,7 +556,7 @@ class Output:
         return self.print()
 
     def drawHGrad(self, color_start: RGB, color_end: RGB, length=0, string="", row=-1, col=-1):
-        """产生一条给定长度的水平渐变色带，并回到起始点以供打印
+        """产生一条给定长度的水平渐变色带
         - 至少提供 length、string 中的一个
         - string中的双宽字符会占据两个宽度，但只有一个色块"""
         if not length:
@@ -583,17 +583,37 @@ class Output:
             i += 1
         return self(line)
 
-    def drawIMG(self, img_path: str, row=-1, col=-1, width=0):
+    def drawVGrad(self, color_start: RGB, color_end: RGB, length=0, row=-1, col=-1):
+        """产生一条给定长度的垂直渐变色带"""
+        if not length:
+            raise ValueError("Parameter length are missed.")
+        gradient = genGradient(color_start, color_end, length)
+        if row >= 0 and col >= 0:
+            self[row, col]
+        else:
+            row, col = self.__row, self.__col
+        for i in range(length):
+            self[row+i, col](bg_rgb(gradient[i])+" ")
+        return self
+
+    def drawIMG(self, img_path: str, row=-1, col=-1, width=0, resample=1):
         """### 在终端绘制图片
         - img_path: 图片路径
         - row, col: 起始位置(默认使用当前光标位置)
-        - width: 最大宽度(字符数，0表示自动)"""
+        - width: 最大宽度(字符数，0表示自动)
+        - resample: 图片重采样方法（向下质量变高，保留锯齿棱角选0）
+            - NEAREST = 0
+            - BOX = 4
+            - BILINEAR = 2
+            - HAMMING = 5
+            - BICUBIC = 3
+            - LANCZOS = 1"""
         if row < 0 or col < 0:
             row = self.__row
             col = self.__col
         self.getSize()
         width = width or self.width - col
-        img = getIMG(img_path, width)
+        img = getIMG(img_path, width, resample)
         width, height = img.size
         pixels = img.load()
         # 定位光标
@@ -687,5 +707,5 @@ def NbCmdIO():
     prt[HEIGHT + 1].setOriginTerm().end()
     prt.gotoCenterOffset(70)
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
-    prt.drawHGrad((34, 225, 255), (98, 94, 177), 70).end(2)
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
     prt.test().end()
