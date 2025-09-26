@@ -133,14 +133,21 @@ def genGradient(color_start, color_end, num):
     return gradient
 
 
-def getIMG(img_path:str, width:int, resample=1):
+def getIMG(img_path:str, width:int, height:int, resample=1):
     try:
-        img = Image.open(img_path)
+        if isinstance(img_path,str):
+            img = Image.open(img_path)
+        elif isinstance(img_path, Image.Image):
+            img = img_path
+        else:
+            raise TypeError()
     except Exception as e:
         raise ValueError(f"无法加载图片: {e}")
     # 计算缩放比例
     img_width, img_height = img.size
-    ratio = width / img_width
+    ratio_width = width / img_width
+    ratio_height = height / img_height
+    ratio = min(ratio_width, ratio_height)
     new_width = int(img_width * ratio)
     new_height = int(img_height * ratio)
     if new_height % 2:

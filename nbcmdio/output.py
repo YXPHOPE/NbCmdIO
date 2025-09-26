@@ -11,8 +11,8 @@ Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，
 
 
 import re
-from sys import stdout
 from io import IOBase
+from sys import stdout
 from typing import Any, Union
 from platform import system as getOS
 from os import system, get_terminal_size
@@ -237,6 +237,8 @@ class Output:
         self.__row, self.__col = row, col
         row += self.origin_row
         col += self.origin_col
+        if row<0 or col<0 or row>self.size_row or col>self.size_col:
+            raise ValueError(f"loc of ({row}, {col}) from ({self.__row}, {self.__col}) is invalid!")
         return self.csi(f"{row};{col}H")
 
     def col(self, n: int):
@@ -475,6 +477,24 @@ class Output:
         if offset < 0:
             offset = 0
         return self.col(offset)(s)
+    
+    def valLoc(self, row: int, col: int):
+        if row<0: row = self.__row
+        elif row > self.height: 
+            raise ValueError(f"Beyond the region: Row {row} has exceeded!")
+        if col < 0: col = self.__col
+        elif col > self.width:
+            raise ValueError(f"Beyond the region: Col {col} has exceeded!")
+        if row != self.__row or col != self.__col:
+            self[row, col]
+        return (row, col)
+    
+    def valSize(self, row: int, col: int, height: int, width: int):
+        maxh = self.height - row
+        maxw = self.width - col
+        if height <= 0 or height > maxh: height = maxh
+        if width <= 0 or width > maxw: width = maxw
+        return (height, width)
 
     def setOrigin(self, row: int, col: int, width=0, height=0, base=0):
         """### 设定新的坐标原点与宽高
@@ -507,23 +527,23 @@ class Output:
 
     def drawHLine(self, length: int, row=-1, col=-1, mark="─"):
         """在给定位置/光标当前位置生成给定长度的**横线**"""
-        if row >= 0 and col >= 0:
-            self[row, col]
-        self(mark * length)
+        row, col = self.valLoc(row, col)
+        if col + length > self.width:
+            raise ValueError(f"Beyond the region: Given length {length} from col {col} > width {self.width}!")
+        self.print(mark * length)
         return self
 
     def drawVLine(self, length: int, row=-1, col=-1, mark="│"):
         """在给定位置/之前设定位置生成给定长度的**竖线**"""
-        if row < 0 or col < 0:
-            row, col = self.__row, self.__col
+        row, col = self.valLoc(row, col)
         for i in range(length):
-            self[row + i, col].p(mark)
+            self.col(col).p(mark+"\n")
         return self.chkReset()
 
     def drawRect(self, width: int, height: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
-        if row < 0 or col < 0:
-            row, col = self.__row, self.__col
+        row, col = self.valLoc(row, col)
+        height, width = self.valSize(row, col, height, width)
         if as_origin:
             self.setOrigin(row, col, width, height)
             row = col = 0
@@ -545,16 +565,13 @@ class Output:
         - row、col: 行、列位置，未给定则使用上一次设定的位置
 
         注：每行宽度请勿超过该位置终端剩余宽度，确保终端剩余高度超过行数"""
-        if row < 0 or col < 0:
-            row, col = self.__row, self.__col
+        row, col = self.valLoc(row, col)
         if isinstance(lines, str):
             if width:
                 if "\t" in lines:
                     # self.log()
                     pass
-                max_width = self.size_col - col - self.origin_col
-                if width > max_width:
-                    width = max_width
+                _, width = self.valSize(row, col, 0, width)
                 lines = splitLinesByWidth(lines, width)
             else:
                 lines = lines.splitlines()
@@ -574,9 +591,10 @@ class Output:
         string = padString(string, length)
         if not length:
             raise ValueError("Parameter length and string are missed.")
+        row, col = self.valLoc(row, col)
+        if length + col > self.width:
+            raise ValueError("Beyond the region!")
         gradient = genGradient(color_start, color_end, length)
-        if row >= 0 and col >= 0:
-            self[row, col]
         i, n_wc, is_wc, line = 0, 0, False, ""
         while i < length:
             if is_wc:
@@ -594,34 +612,30 @@ class Output:
         if not length:
             raise ValueError("Parameter length are missed.")
         gradient = genGradient(color_start, color_end, length)
-        if row >= 0 and col >= 0:
-            self[row, col]
-        else:
-            row, col = self.__row, self.__col
+        row, col = self.valLoc(row, col)
         for i in range(length):
             self[row+i, col](bg_rgb(gradient[i])+" ")
         return self
 
-    def drawIMG(self, img_path: str, row=-1, col=-1, width=0, resample=1):
+    def drawIMG(self, img_path: str, row=-1, col=-1, width=0, height=0, resample=1):
         """### 在终端绘制图片
         - img_path: 图片路径
-        - row, col: 起始位置(默认使用当前光标位置)
+        - row, col: 起始位置(默认使用loc设定的光标位置)
         - width: 最大宽度(字符数，0表示自动)
-        - resample: 图片重采样方法（向下质量变高，保留锯齿棱角选0）
+        - resample: 图片重采样方法（向下质量越高，保留锯齿棱角选0）
             - NEAREST = 0
             - BOX = 4
             - BILINEAR = 2
             - HAMMING = 5
             - BICUBIC = 3
-            - LANCZOS = 1"""
-        if row < 0 or col < 0:
-            row, col = self.__row, self.__col
+            - LANCZOS = 1
+
+        Returns: (height, width) 终端显示图片的实际大小"""
+        row, col = self.valLoc(row, col)
+        height, width = self.valSize(row, col, height, width)
         self.getSize()
-        max_width = self.width - col
-        if width==0 or width>max_width:
-            width = max_width
-        img = getIMG(img_path, width, resample)
-        width, height = img.size
+        img = getIMG(img_path, width, height, resample)
+        width, height = img.size # 经过getIMG处理，height一定为偶数
         pixels = img.load()
         # 定位光标
         for y in range(0, height, 2):  # 每两行一组
@@ -630,10 +644,11 @@ class Output:
                 # 获取上下两个像素
                 upper = bg_rgb(pixels[x, y])
                 lower = fg_rgb(pixels[x, y + 1])
-                # 使用Unicode上半个字符和下半个字符
+                # 使用Unicode上半个字符和下半个字符█▄▀ (也可以用这个画Rect)
                 line += upper + lower + "▄"
             self.col(col)(line).end()
-        return self.chkReset()
+        self.chkReset()
+        return (height//2, width)
 
     # with上下文管理
     def __enter__(self):
@@ -716,3 +731,34 @@ def NbCmdIO():
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
     prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
     prt.test().end()
+
+
+class ASCIIMethod():
+  CHARSETS = {
+    'simple': ' .:-=+*#%@',
+    'extended': ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
+  }
+
+  def __init__(self, image, invert_background=False, charset='simple'):
+    self.image = image
+    chars = ASCIIMethod.CHARSETS[charset]
+    width, _ = image.size
+    image = image.convert('L')
+    pix = image.getdata()
+
+    string = ''
+    if invert_background:
+      chars = list(reversed(chars))
+    line_counter = 0
+    tdiv = (255 / len(chars))
+    div = int(tdiv)
+    if div!=tdiv: div+=1
+    for i, p in enumerate(pix):
+      if line_counter % 2 == 0:
+        string += chars[p // div - 1]
+      if i % width == width-1:
+        if line_counter % 2 == 0:
+          string += '\n'
+        line_counter += 1
+
+    return string
