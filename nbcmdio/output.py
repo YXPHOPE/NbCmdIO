@@ -12,6 +12,7 @@ Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，
 
 import re
 from sys import stdout
+from io import IOBase
 from typing import Any, Union
 from platform import system as getOS
 from os import system, get_terminal_size
@@ -44,6 +45,7 @@ class Output:
         self.origin_row, self.origin_col = 0, 0
         self.width, self.height = 0, 0
         self.getSize()
+        self.setFile(stdout)
         self.__row, self.__col = 1, 1
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
@@ -64,8 +66,16 @@ class Output:
             self.__cls = "clear"
 
     def setTitle(self, title: str):
-        stdout.write(f"\033]2;{title}\a")
+        self.write(f"\033]2;{title}\a")
         return self
+    
+    def setFile(self, file):
+        if isinstance(file, IOBase) and file.writable():
+            self.file = file
+            self.write = file.write
+            return True
+        else:
+            return False
 
     # 清除相关
     def cls(self):
@@ -83,12 +93,6 @@ class Output:
     def clearAllAfterCursor(self):
         return self.csi("0J")
 
-    def reset(self):
-        """重置所有样式"""
-        # ? 是否先self.csi("0m")，再self.__str = ""，这样获取样式时就不会有开头的先自动重置
-        self.__str = ""
-        return self.csi("0m")
-
     def clearLine(self):
         return self.csi("2K")
 
@@ -105,7 +109,7 @@ class Output:
     def end(self, nl = 1):
         """重置颜色，并打印换行结尾"""
         self.reset()
-        stdout.write("\n" * nl)
+        self.write("\n" * nl)
         return self
 
     def csi(self, s: str, *args):
@@ -114,7 +118,7 @@ class Output:
             self.__str += s
         else:
             self.__str = ""
-        stdout.write(s)
+        self.write(s)
         if args:
             self.print(*args)
         return self
@@ -123,20 +127,30 @@ class Output:
     def __call__(self, *args: Any, **kwds: Any):
         return self.print(*args, **kwds)
 
-    def print(self, *args: Any, **kwds: Any):
+    def print(self, *args: Any, sep = " ", end = ""):
         """### 以已加载样式输出所有内容
-        - 默认end=""
         - 将会清除self.__str中保存的样式
         - 默认自动reset重置样式"""
-        if "end" not in kwds:
-            kwds["end"] = ""
         self.__str = ""
-        print(*args, **kwds)
-        return self.reset() if self.auto_reset else self
+        s = sep.join([str(i) for i in args])
+        self.write(s + end) # 在终端会自动flush输出
+        return self.chkReset()
 
     def p(self, s: str):
         """不重置样式的输出"""
-        stdout.write(s)
+        self.write(s)
+        return self
+    
+    def reset(self):
+        """重置所有样式"""
+        # ? 是否先self.csi("0m")，再self.__str = ""，这样获取样式时就不会有开头的先自动重置
+        self.__str = ""
+        self.write(self.RESET)
+        return self
+    
+    def chkReset(self):
+        if self.auto_reset:
+            self.reset()
         return self
 
     def autoResetOn(self):
@@ -235,7 +249,8 @@ class Output:
 
     def getLoc(self):
         """获取当前光标位置（相对设定的原点） -> (row, col)"""
-        print(self.CSI + "6n", end="", flush=True)
+        self.write(self.CSI + "6n")
+        self.file.flush()
         res = inp.get_str()
         match = re.match(r"^\x1b\[(\d+);(\d+)R", res)
         if match:
@@ -418,7 +433,7 @@ class Output:
 
     def use(self, style: Style):
         """使用Style样式"""
-        stdout.write(str(style))
+        self.write(str(style))
         return self
 
     def getSize(self):
@@ -487,7 +502,7 @@ class Output:
 
     def drawNL(self, nline=1):
         """打印 nline=1 个新行"""
-        stdout.write("\n" * nline)
+        self.write("\n" * nline)
         return self
 
     def drawHLine(self, length: int, row=-1, col=-1, mark="─"):
@@ -503,7 +518,7 @@ class Output:
             row, col = self.__row, self.__col
         for i in range(length):
             self[row + i, col].p(mark)
-        return self.print()
+        return self.chkReset()
 
     def drawRect(self, width: int, height: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
@@ -546,7 +561,7 @@ class Output:
         for i in range(len(lines)):
             # row超过终端高度会在最后一行打印，使用换行可产生新行，但其他坐标位置也都相对变化了
             self[i + row, col].p(lines[i])
-        return self.print()
+        return self.chkReset()
 
     def drawHGrad(self, color_start: RGB, color_end: RGB, length=0, string="", row=-1, col=-1):
         """产生一条给定长度的水平渐变色带
@@ -618,7 +633,7 @@ class Output:
                 # 使用Unicode上半个字符和下半个字符
                 line += upper + lower + "▄"
             self.col(col)(line).end()
-        return self.print()
+        return self.chkReset()
 
     # with上下文管理
     def __enter__(self):
