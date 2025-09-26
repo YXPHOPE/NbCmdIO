@@ -162,3 +162,5 @@ class Timer:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.t2 = time.time()
         print(f"{self.t2 - self.t1:.4f}")
+
+TIMER = Timer()
