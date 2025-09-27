@@ -3,7 +3,7 @@ Author: Cipen
 Date:   2024/05/27
 Desc:   提供一个基于控制台输出的任意位置输出RGB色彩文字，只需设置一次Style，即可用于在任意loc的文字输出，直到reset
 参见：https://www.man7.org/linux/man-pages/man4/console_codes.4.html
-致谢：少部分内容借鉴colorama、curses
+致谢：少部分内容借鉴colorama(setTitle)、curses(textpad,rect)、timg(ascii method)
 
 - [x] 2025/09/22 by Cipen: 统一所有函数，默认不提供row, col，而是直接使用前面[]定位所使用的位置
 - [x] 完成跨平台的getLoc函数
@@ -37,7 +37,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.5"
+    __version__ = "1.8.6"
 
     def __init__(self, auto_reset=True) -> None:
         self.auto_reset = auto_reset
@@ -628,12 +628,12 @@ class Output:
         gradient = genGradient(color_start, color_end, length)
         row, col = self.valLoc(row, col)
         for i in range(length):
-            self[row+i, col](bg_rgb(gradient[i])+" ")
+            self[row+i, col](bg_rgb(gradient[i]) + " ")
         return self
 
-    def drawIMG(self, img_path: str, row=-1, col=-1, width=0, height=0, resample=1):
+    def drawImage(self, img_path: str, row=-1, col=-1, width=0, height=0, resample=1):
         """### 在终端绘制图片
-        - img_path: 图片路径
+        - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
         - width: 最大宽度(字符数，0表示自动)
         - resample: 图片重采样方法（向下质量越高，保留锯齿棱角选0）
@@ -648,7 +648,7 @@ class Output:
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
         self.getSize()
-        img = getIMG(img_path, width, height, resample)
+        img = getIMG(img_path, width, height * 2, resample=resample)
         width, height = img.size # 经过getIMG处理，height一定为偶数
         pixels = img.load()
         # 定位光标
@@ -662,7 +662,40 @@ class Output:
                 line += upper + lower + "▄"
             self.col(col)(line).end()
         self.chkReset()
-        return (height//2, width)
+        return (height//2, width, height)
+    
+    def drawImageStr(self, image, row=-1, col=-1, width=0, height=0, resample=1, invert_background=False):
+        row, col = self.valLoc(row, col)
+        height, width = self.valSize(row, col, height, width)
+        image = getIMG(image, width, height * 2, resample=resample)
+        chars = ' .:-=+*#%@'
+        div = 26 # 256色分给chars，值越大越亮，字符越密
+        width, height = image.size
+        image = image.convert('L')
+        pix = image.getdata()
+
+        string, line_counter = '', 0
+        if invert_background:
+            chars = list(reversed(chars))
+        for r in range(0, height, 2):
+            line = ""
+            for c in range(width):
+                i = r * width + c # 2行取平均值
+                d = (pix[i] + pix[i+width]) // 2 // div - 1
+                line += chars[d]
+            line += "\n"
+            string += line
+            self.p(line)
+        # for i, p in enumerate(pix): # timg 隔行取值
+        #     if line_counter % 2 == 0:
+        #         string += chars[p // div - 1]
+        #     if i % width == width-1:
+        #         if line_counter % 2 == 0:
+        #             string += '\n'
+        #         line_counter += 1
+        self.chkReset()
+        return string
+
 
     # with上下文管理
     def __enter__(self):
@@ -745,34 +778,3 @@ def NbCmdIO():
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
     prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
     prt.test().end()
-
-
-class ASCIIMethod():
-  CHARSETS = {
-    'simple': ' .:-=+*#%@',
-    'extended': ' .\'`^",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$'
-  }
-
-  def __init__(self, image, invert_background=False, charset='simple'):
-    self.image = image
-    chars = ASCIIMethod.CHARSETS[charset]
-    width, _ = image.size
-    image = image.convert('L')
-    pix = image.getdata()
-
-    string = ''
-    if invert_background:
-      chars = list(reversed(chars))
-    line_counter = 0
-    tdiv = (255 / len(chars))
-    div = int(tdiv)
-    if div!=tdiv: div+=1
-    for i, p in enumerate(pix):
-      if line_counter % 2 == 0:
-        string += chars[p // div - 1]
-      if i % width == width-1:
-        if line_counter % 2 == 0:
-          string += '\n'
-        line_counter += 1
-
-    return string

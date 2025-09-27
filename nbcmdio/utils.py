@@ -132,16 +132,17 @@ def genGradient(color_start, color_end, num):
     return gradient
 
 
-def getIMG(img_path:str, width:int, height:int, resample=1):
+def getIMG(img_path:str, width:int, height=0x7FFFFFFF, resample=1):
     try:
         if isinstance(img_path,str):
             img = Image.open(img_path)
         elif isinstance(img_path, Image.Image):
             img = img_path
         else:
-            raise TypeError()
+            raise TypeError("Invalid type!")
     except Exception as e:
-        raise ValueError(f"无法加载图片: {e}")
+        raise ValueError(f"Parameter img_path({img_path}) is not "
+                         "a valid image path or instance of Image: {e}.")
     # 计算缩放比例
     img_width, img_height = img.size
     ratio_width = width / img_width

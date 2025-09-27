@@ -99,6 +99,10 @@ def NbCmdIO():
     prt[HEIGHT + 1].setOriginTerm().end()
     prt.gotoCenterOffset(70)
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.test().end()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
     prt.drawHGrad((34, 225, 255), (98, 94, 177), 70).end(2)
     prt.test().end()
 
