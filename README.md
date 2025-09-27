@@ -28,6 +28,7 @@ prt[row, col].bold().fg_red("text")
 - 支持Bold、Underline、Italics等效果
 - 真彩显示图片，单字符显示两个像素点大大提升分辨率
 ![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
+- 显示ASCII灰度图片
 
 ### 🖱️ 像素级光标控制
 - 精确到字符的光标定位
@@ -103,6 +104,18 @@ def NbCmdIO():
     prt.test().end()
     prt.gotoCenterOffset(70)
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.test().end()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.test().end()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.test().end()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
     prt.drawHGrad((34, 225, 255), (98, 94, 177), 70).end(2)
     prt.test().end()
 
@@ -149,3 +162,11 @@ pip install nbcmdio
 - 1.8.3 修复部分问题，添加快捷ps1批处理文件，分离style
 - 1.8.4 添加多行区域打印，分离utils
 - 1.8.5 feat: drawHGrad(渐变), drawIMG(终端显示图片)
+- 1.8.6 improve: add valiation of loc, size
+        feat: drawImageStr
+
+## 🙏 致谢
+
+- **[colorama](https://github.com/tartley/colorama)** 借鉴CSI设置终端标题的方法
+- **[timg](https://github.com/adzierzanowski/timg)** 借鉴ASCII方法绘制灰度图片，并指出修复[问题#4](https://github.com/adzierzanowski/timg/issues/4)
+- **[curses](https://github.com/zephyrproject-rtos/windows-curses)** 借鉴hline、vline、rectangle方法

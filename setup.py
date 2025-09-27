@@ -2,7 +2,7 @@ import re
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.8.6"
+VERSION = "1.8.62"
 
 
 def replaceFile(filename, pattern, repl):

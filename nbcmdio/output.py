@@ -37,7 +37,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.6"
+    __version__ = "1.8.62"
 
     def __init__(self, auto_reset=True) -> None:
         self.auto_reset = auto_reset
@@ -488,10 +488,13 @@ class Output:
             self[row, col]
         return (row, col)
     
-    def valSize(self, row: int, col: int, height: int, width: int):
+    def valSize(self, row: int, col: int, height: int, width: int, h_restricted=False):
         maxh = self.height - row
         maxw = self.width - col
-        if height <= 0 or height > maxh: height = maxh
+        if h_restricted and (height <= 0 or height > maxh):
+            height = maxh
+        if height <= 0: 
+            height = self.size_col # 不限制高度，但默认不超过终端高度
         if width <= 0 or width > maxw: width = maxw
         return (height, width)
 
@@ -527,7 +530,7 @@ class Output:
     def drawHLine(self, length: int, row=-1, col=-1, mark="─"):
         """在给定位置/光标当前位置生成给定长度的**横线**"""
         row, col = self.valLoc(row, col)
-        if col + length > self.width:
+        if col + length -1 > self.width:
             raise ValueError(f"Beyond the region: Given length {length} from col {col} > width {self.width}!")
         self.print(mark * length)
         return self
@@ -542,7 +545,8 @@ class Output:
     def drawRect(self, width: int, height: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
         row, col = self.valLoc(row, col)
-        height, width = self.valSize(row, col, height, width)
+        # ? 4条边占位，实际w+2，h+2，可写区域为w，h，有超过终端边界风险
+        height, width = self.valSize(row, col, height, width, True)
         if as_origin:
             self.setOrigin(row, col, width, height)
             row = col = 0
@@ -606,7 +610,7 @@ class Output:
         if not length:
             raise ValueError("Parameter length and string are missed.")
         row, col = self.valLoc(row, col)
-        if length + col > self.width:
+        if length + col - 1 > self.width:
             raise ValueError("Beyond the region!")
         gradient = genGradient(color_start, color_end, length)
         i, n_wc, is_wc, line = 0, 0, False, ""
@@ -625,17 +629,18 @@ class Output:
         """产生一条给定长度的垂直渐变色带"""
         if length <= 0:
             raise ValueError("Parameter length are invalid.")
+        length *= 2
         gradient = genGradient(color_start, color_end, length)
         row, col = self.valLoc(row, col)
-        for i in range(length):
-            self[row+i, col](bg_rgb(gradient[i]) + " ")
+        for i in range(0, length, 2):
+            self.col(col)(bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄\033[0m\n")
         return self
 
     def drawImage(self, img_path: str, row=-1, col=-1, width=0, height=0, resample=1):
         """### 在终端绘制图片
         - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
-        - width: 最大宽度(字符数，0表示自动)
+        - width, height: 最大宽度、高度(字符数，0表示自动)
         - resample: 图片重采样方法（向下质量越高，保留锯齿棱角选0）
             - NEAREST = 0
             - BOX = 4
@@ -645,9 +650,9 @@ class Output:
             - LANCZOS = 1
 
         Returns: (height, width) 终端显示图片的实际大小"""
+        self.getSize()
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
-        self.getSize()
         img = getIMG(img_path, width, height * 2, resample=resample)
         width, height = img.size # 经过getIMG处理，height一定为偶数
         pixels = img.load()
@@ -681,18 +686,11 @@ class Output:
             line = ""
             for c in range(width):
                 i = r * width + c # 2行取平均值
-                d = (pix[i] + pix[i+width]) // 2 // div - 1
+                d = (pix[i] + pix[i+width]) // 2 // div
                 line += chars[d]
             line += "\n"
             string += line
             self.p(line)
-        # for i, p in enumerate(pix): # timg 隔行取值
-        #     if line_counter % 2 == 0:
-        #         string += chars[p // div - 1]
-        #     if i % width == width-1:
-        #         if line_counter % 2 == 0:
-        #             string += '\n'
-        #         line_counter += 1
         self.chkReset()
         return string
 
@@ -709,11 +707,6 @@ class Output:
             self.autoResetOn()
         return True
 
-    # 日志记录
-    # def log(self):
-    #     pass
-    # def logError(self, s, time=True, trace=True)
-
     def test(self):
         """测试终端能显示的指令\033[0-109m"""
         n = 0
@@ -724,6 +717,11 @@ class Output:
                 line += "\033[%dm  %3d  \033[0m" % (n, n)
             self.alignCenter(line + "\n")
         return self
+    
+    # 日志记录
+    # def log(self):
+    #     pass
+    # def logError(self, s, time=True, trace=True)
 
 
 prt = Output()
