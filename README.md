@@ -2,6 +2,7 @@
 
 <div align="center">
 
+[![English](https://img.shields.io/badge/Readme-English-blue?style=for-the-badge&logo=googledocs&logoColor=white)](https://github.com/YXPHOPE/NbCmdIO/blob/main/README.en.md)
 [![PyPI Version](https://img.shields.io/pypi/v/nbcmdio?style=for-the-badge&logo=pypi)](https://pypi.org/project/nbcmdio/)
 [![License](https://img.shields.io/pypi/l/nbcmdio?style=for-the-badge&logo=opensourceinitiative)](https://github.com/YXPHOPE/NbCmdIO/blob/main/LICENSE)
 
@@ -30,9 +31,10 @@ prt[row, col].bold().fg_red("text")
 ![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
 - 显示ASCII灰度图片
 
-### 🖱️ 像素级光标控制
+### 🖱️ 字符级光标控制
 - 精确到字符的光标定位
 - 保存/恢复光标位置
+- 获取光标位置
 
 ### 📦 动态区域管理
 - 创建独立更新区域
