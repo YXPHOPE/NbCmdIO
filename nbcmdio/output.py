@@ -464,15 +464,14 @@ class Output:
     def alignCenter(self, s: str):
         """使文本居中对齐显示
         - 请勿包含 \\t \\n 等特殊字符"""
+        s = s.replace("\t", Tab)
         return self.gotoCenterOffset(getStringWidth(s))(s)
 
     def alignRight(self, s: str, col=-1):
         """使文本右对齐
         - col: -1: 默认方形最右侧对齐，其他：不占用该格，前一格处右对齐"""
-        if col > 0:
-            col += self.origin_col
-        else:
-            col = self.origin_col + self.width + 1
+        if col < 0 or col > self.width:
+            col = self.width + 1
         offset = col - getStringWidth(s)
         if offset < 0:
             offset = 0
@@ -557,33 +556,48 @@ class Output:
         self.auto_reset = reset
         return self[1, 1]
 
-    def printLines(self, lines: Union[str, list[str]], width=0, row=-1, col=-1):
+    def printLines(self, lines: Union[str, list[str]], width=0, height=0, row=-1, col=-1, overflow=1):
         """在给定坐标处左对齐显示多行文本（直接打印多行文本会使后面的行回到终端最左侧）
         - lines: str | list[str], str会自动被splitlines
         - width: lines为str时生效，换行分割宽度（自身换行符处也会被分割，请勿包含\\t）\n
               未指定则按str中的换行符分割
         - row、col: 行、列位置，未给定则使用上一次设定的位置
+        - overflow：=0截断，1...省略，其他继续输出
 
         注：每行宽度请勿超过该位置终端剩余宽度，确保终端剩余高度超过行数"""
         row, col = self.valLoc(row, col)
+        height, width = self.valSize(row, col, height, width)
         if isinstance(lines, str):
             if width:
-                if "\t" in lines:
-                    # self.log()
-                    pass
-                _, width = self.valSize(row, col, 0, width)
+                lines = lines.replace("\t", Tab)
                 lines = splitLinesByWidth(lines, width)
             else:
                 lines = lines.splitlines()
+        else:
+            # 处理 宽度 溢出，str时splitLinesByWidth已确保宽度不溢出
+            for i in range(len(lines)):
+                diff = getStringWidth(lines[i]) - width
+                if diff > 0:
+                    if overflow == 1: lines[i] = lines[i][:-diff-3]+"..."
+                    elif overflow == 0: lines[i] = lines[i][:-diff]
+        # 处理 高度 溢出
+        if len(lines) > height:
+            if overflow == 1:
+                lines = lines[:height]
+                lastline = lines[height-1]
+                l = splitLinesByWidth(lastline, width)[0]
+                lines[height-1] = lastline[:-3]+"..."
+            elif overflow == 0:
+                lines = lines[:height]
         for i in range(len(lines)):
-            # row超过终端高度会在最后一行打印，使用换行可产生新行，但其他坐标位置也都相对变化了
-            self[i + row, col].p(lines[i])
+            self.col(col).p(lines[i] + "\n")
         return self.chkReset()
 
     def drawHGrad(self, color_start: RGB, color_end: RGB, length=0, string="", row=-1, col=-1):
         """产生一条给定长度的水平渐变色带
         - 至少提供 length、string 中的一个
         - string中的双宽字符会占据两个宽度，但只有一个色块"""
+        string = string.replace("\t", Tab)
         if not length:
             length = getStringWidth(string)
         if not string:
@@ -609,8 +623,8 @@ class Output:
 
     def drawVGrad(self, color_start: RGB, color_end: RGB, length=0, row=-1, col=-1):
         """产生一条给定长度的垂直渐变色带"""
-        if not length:
-            raise ValueError("Parameter length are missed.")
+        if length <= 0:
+            raise ValueError("Parameter length are invalid.")
         gradient = genGradient(color_start, color_end, length)
         row, col = self.valLoc(row, col)
         for i in range(length):

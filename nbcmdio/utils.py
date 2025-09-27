@@ -5,7 +5,8 @@ from unicodedata import east_asian_width
 import time
 
 # ------------------------------字符类处理函数---------------------------------
-
+TabWidth = 4
+Tab = " " * TabWidth
 
 def getCharWidth(c: str):
     """返回字符宽度
@@ -21,9 +22,7 @@ def getCharWidth(c: str):
 def getStringWidth(s: str):
     """返回字符串去除CSI转义序列、\n、\t后的显示长度"""
     raw = re.sub(r"\033\[[\d;\?]*[a-zA-Z]", "", s)  # 去除csi转义序列
-    # raw = re.sub(r"[\n\t]", "", raw) # 宽度为0
     return sum(getCharWidth(c) for c in raw)
-
 
 def getEscapeString(s: str):
     """将一些不可见的控制字符转为可见的转义字符，包括空格32之前的和127 Delete（Oct：177）"""
