@@ -151,6 +151,7 @@ pip install nbcmdio
 - 1.8.6 improve: add valiation of loc, size
         feat: drawImageStr
 - 1.8.63 feat: Output.playGif, 播放gif动画
+- 1.8.64 fix: Output.valSize, 高度溢出
 
 ## 🙏 致谢
 

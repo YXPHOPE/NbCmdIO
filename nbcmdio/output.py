@@ -37,7 +37,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.63"
+    __version__ = "1.8.64"
     CHARSET = {
         'basic': ' .:-=+*#%@',
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
@@ -675,7 +675,7 @@ class Output:
                 line += upper + lower + "▄"
             self.col(col)(line).end()
         self.chkReset()
-        return (height//2, width, height)
+        return (height//2, width)
     
     def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
         """ ### 使用ASCII字符绘制灰度图
@@ -717,6 +717,7 @@ class Output:
 
     def playGif(self, gif_path, row=-1, col=-1, width=0, height=0):
         """### 播放gif动画
+        - 将隐藏光标，播放完毕后恢复
         - Output.fps 设定帧率
         - Returns: (帧数，播放用时) 用时不包准备时间"""
         row, col = self.valLoc(row, col)
@@ -739,6 +740,7 @@ class Output:
         except Exception as e:
             self.printLines(f'Failed to play "{gif_path}": {e}.', width=width, row=row, col=col)
         total_time = time.perf_counter() - t0
+        self.showCursor()
         return gif.n_frames, total_time
 
     # with上下文管理

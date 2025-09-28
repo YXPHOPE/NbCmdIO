@@ -149,6 +149,7 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.6 improve: added validation for loc, size
         feat: drawImageStr
 - 1.8.63 feat: Output.playGif
+- 1.8.64 fix: height overflow in Output.valSize
 
 ## 🙏 Acknowledgments
 
