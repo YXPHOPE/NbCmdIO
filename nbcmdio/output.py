@@ -483,14 +483,15 @@ class Output:
         return self.col(offset)(s)
     
     def valLoc(self, row: int, col: int):
-        if row<0: row = self.__row
+        """将上次loc赋给未指定的值，或检查给定row、col是否有效，有效则跳至该位置 """
+        if row < 0: row = self.__row
         elif row > self.height: 
             raise ValueError(f"Beyond the region: Row {row} has exceeded!")
         if col < 0: col = self.__col
         elif col > self.width:
             raise ValueError(f"Beyond the region: Col {col} has exceeded!")
         if row != self.__row or col != self.__col:
-            self[row, col]
+            self.loc(row, col)
         return (row, col)
     
     def valSize(self, row: int, col: int, height: int, width: int, h_restricted=False):
@@ -675,7 +676,7 @@ class Output:
                 line += upper + lower + "▄"
             self.col(col)(line).end()
         self.chkReset()
-        return (height//2, width)
+        return (row, col, height//2, width)
     
     def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
         """ ### 使用ASCII字符绘制灰度图
@@ -742,6 +743,17 @@ class Output:
         total_time = time.perf_counter() - t0
         self.showCursor()
         return gif.n_frames, total_time
+    
+    def clearRegion(self, height:int, width:int, row=-1, col=-1):
+        """### 清除一个区域
+        - 用空格清除指定位置大小的内容"""
+        row, col = self.valLoc(row, col)
+        height, width = self.valSize(row, col, height, width)
+        line = ' ' * width
+        for i in range(height):
+            self.col(col).p(line + "\n")
+        return self
+        
 
     # with上下文管理
     def __enter__(self):
