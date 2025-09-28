@@ -157,6 +157,19 @@ def getIMG(img_path: Union[str, Image.Image], width:int, height=0x7FFFFFFF, resa
     img = img.convert("RGB")
     return img
 
+
+# ------------------------------时间类处理函数---------------------------------
+
+PRECISE = 1 / 64 # windows下的时间精度
+
+def sleepPrecise(seconds):
+    start = time.perf_counter()
+    n = seconds // PRECISE - 1
+    if n > 0:
+        time.sleep(n * PRECISE)
+    while time.perf_counter() - start < seconds:
+        pass
+
 # 通过耗时测试性能（本身也耗时，自测耗0.015s左右）
 class Timer:
     def __init__(self) -> None:
@@ -164,10 +177,10 @@ class Timer:
         self.t2 = 0
 
     def __enter__(self):
-        self.t1 = time.time()
+        self.t1 = time.perf_counter()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.t2 = time.time()
-        print(f"{self.t2 - self.t1:.4f}")
+        self.t2 = time.perf_counter()
+        print(f"{self.t2 - self.t1:.9f}")
 
 TIMER = Timer()

@@ -24,7 +24,7 @@ prt[row, col].bold().fg_red("text")
 ```
 
 ### 🎨 True-Color RGB Terminal Styling
-- Supports RGB and HEX formats for foreground and background colors
+- Supports 24 bit RGB and HEX formats for foreground and background colors
 - Includes default colors: Black, Red, Green, etc.
 - Supports effects like Bold, Underline, Italics, etc.
 - True-color image display, with each character representing two pixels for enhanced resolution
@@ -148,6 +148,7 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.5 feat: drawHGrad (gradient), drawIMG (terminal image display)
 - 1.8.6 improve: added validation for loc, size
         feat: drawImageStr
+- 1.8.63 feat: Output.playGif
 
 ## 🙏 Acknowledgments
 

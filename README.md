@@ -24,7 +24,7 @@ prt[row, col].bold().fg_red("text")
 ```
 
 ### 🎨 真彩RGB终端着色
-- 支持以RGB、HEX格式设定前景色、背景色
+- 支持以24位RGB、HEX格式设定前景色、背景色
 - 支持默认颜色：Black、Red、Green等
 - 支持Bold、Underline、Italics等效果
 - 真彩显示图片，单字符显示两个像素点大大提升分辨率
@@ -118,6 +118,10 @@ def NbCmdIO():
     prt.test().end()
     prt.gotoCenterOffset(70)
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.test().end()
+    prt.gotoCenterOffset(70)
+    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
     prt.drawHGrad((34, 225, 255), (98, 94, 177), 70).end(2)
     prt.test().end()
 
@@ -166,6 +170,7 @@ pip install nbcmdio
 - 1.8.5 feat: drawHGrad(渐变), drawIMG(终端显示图片)
 - 1.8.6 improve: add valiation of loc, size
         feat: drawImageStr
+- 1.8.63 feat: Output.playGif, 播放gif动画
 
 ## 🙏 致谢
 

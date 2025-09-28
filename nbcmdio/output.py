@@ -37,7 +37,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.62"
+    __version__ = "1.8.63"
     CHARSET = {
         'basic': ' .:-=+*#%@',
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
@@ -54,6 +54,7 @@ class Output:
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
         self.__acmlt = "mHG"  # 样式累积类型
+        self.fps = 25 # 播放GIF等的帧率
 
         os = getOS()
         if os == "Windows":
@@ -127,7 +128,7 @@ class Output:
             self.print(*args)
         return self
 
-    # 打印输出的2种方式：prt(*arg)、prt.print(*arg)
+    # 打印输出的2种方式：Output(*arg)、Output.print(*arg)
     def __call__(self, *args: Any, **kwds: Any):
         return self.print(*args, **kwds)
 
@@ -495,10 +496,12 @@ class Output:
     def valSize(self, row: int, col: int, height: int, width: int, h_restricted=False):
         maxh = self.height - row
         maxw = self.width - col
+        # 如果限制换行，则高度限制在终端内
         if h_restricted and (height <= 0 or height > maxh):
             height = maxh
+        # 不限制高度，但默认不超过终端高度
         if height <= 0: 
-            height = self.size_col # 不限制高度，但默认不超过终端高度
+            height = self.size_row
         if width <= 0 or width > maxw: width = maxw
         return (height, width)
 
@@ -640,7 +643,7 @@ class Output:
             self.col(col)(bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄\033[0m\n")
         return self
 
-    def drawImage(self, img_path: str, row=-1, col=-1, width=0, height=0, resample=1):
+    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, resample=1):
         """### 在终端绘制图片
         - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
@@ -673,7 +676,7 @@ class Output:
         self.chkReset()
         return (height//2, width, height)
     
-    def drawImageStr(self, image, row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
+    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
         """ ### 使用ASCII字符绘制灰度图
         - image: 图片路径 / Image
         - row, col: 绘制起点位置(默认使用loc设定的光标位置)
@@ -688,7 +691,7 @@ class Output:
         if chars in self.CHARSET:
             chars = self.CHARSET[chars]
         image = getIMG(image, width, height * 2, resample=resample)
-        tmp = 255 / len(chars) # 26 # 256色分给chars，值越大越亮，字符越密
+        tmp = 255 / len(chars) # 256色分给chars，值越大越亮，字符越密
         div = int(tmp) # 和下句共同构成math.ceil效果
         if div != tmp:
             div += 1
@@ -711,6 +714,31 @@ class Output:
         self.chkReset()
         return string
 
+    def playGif(self, gif_path, row=-1, col=-1, width=0, height=0):
+        """### 播放gif动画
+        - Output.fps 设定帧率
+        - Returns: (帧数，播放用时) 用时不包准备时间"""
+        row, col = self.valLoc(row, col)
+        height, width = self.valSize(row, col, height, width)
+        gif = Image.open(gif_path)
+        self.hideCursor()
+        spf = 1 / self.fps
+        t0 = time.perf_counter()
+        try:
+            frame_index = 0
+            for i in range(gif.n_frames):
+                gif.seek(i)
+                frame = gif.copy()
+                img = frame.convert('RGB')
+                self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
+                frame_index += 1
+                t = time.perf_counter()
+                residue = t0 + spf*(i+1) - t
+                if residue > 0: sleepPrecise(residue)
+        except Exception as e:
+            self.printLines(f'Failed to play "{gif_path}": {e}.', width=width, row=row, col=col)
+        total_time = time.perf_counter() - t0
+        return gif.n_frames, total_time
 
     # with上下文管理
     def __enter__(self):
