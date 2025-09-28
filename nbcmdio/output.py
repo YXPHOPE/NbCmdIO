@@ -499,9 +499,9 @@ class Output:
         # 如果限制换行，则高度限制在终端内
         if h_restricted and (height <= 0 or height > maxh):
             height = maxh
-        # 不限制高度，但默认不超过终端高度
+        # 不限制高度，但默认不超过终端高度（终端占有一行用于输入）
         if height <= 0: 
-            height = self.size_row
+            height = self.size_row - 1
         if width <= 0 or width > maxw: width = maxw
         return (height, width)
 
@@ -518,6 +518,7 @@ class Output:
         self.origin_col = col
         self.width = width or self.size_col - self.origin_col
         self.height = height or self.size_row - self.origin_row
+        self.loc(0,0)
         return self
 
     def setOriginTerm(self):
@@ -731,7 +732,7 @@ class Output:
                 frame = gif.copy()
                 img = frame.convert('RGB')
                 self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
-                frame_index += 1
+                frame_index += 1 - 1
                 t = time.perf_counter()
                 residue = t0 + spf*(i+1) - t
                 if residue > 0: sleepPrecise(residue)
