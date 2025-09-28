@@ -132,7 +132,7 @@ def genGradient(color_start, color_end, num):
     return gradient
 
 
-def getIMG(img_path:str, width:int, height=0x7FFFFFFF, resample=1):
+def getIMG(img_path: Union[str, Image.Image], width:int, height=0x7FFFFFFF, resample=1):
     try:
         if isinstance(img_path,str):
             img = Image.open(img_path)

@@ -38,6 +38,10 @@ class Output:
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
     __version__ = "1.8.62"
+    CHARSET = {
+        'basic': ' .:-=+*#%@',
+        'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
+    }
 
     def __init__(self, auto_reset=True) -> None:
         self.auto_reset = auto_reset
@@ -641,7 +645,7 @@ class Output:
         - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
         - width, height: 最大宽度、高度(字符数，0表示自动)
-        - resample: 图片重采样方法（向下质量越高，保留锯齿棱角选0）
+        - resample: 图片重采样方法（向下质量越高，默认1，保留锯齿棱角选0）
             - NEAREST = 0
             - BOX = 4
             - BILINEAR = 2
@@ -669,12 +673,25 @@ class Output:
         self.chkReset()
         return (height//2, width, height)
     
-    def drawImageStr(self, image, row=-1, col=-1, width=0, height=0, resample=1, invert_background=False):
+    def drawImageStr(self, image, row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
+        """ ### 使用ASCII字符绘制灰度图
+        - image: 图片路径 / Image
+        - row, col: 绘制起点位置(默认使用loc设定的光标位置)
+        - width, height: 最大宽度、高度(字符数，0表示自动)
+        - chars：优先使用Output.CHARSET中定义的字符集，如果不存在则使用给定的（由暗至亮排列），默认为basic: ' .:-=+*#%@'
+        - resample: 图片重采样方法（向下质量越高，默认1，保留锯齿棱角选0）
+        - invert_background=False 反相
+        
+        Returns: str 用chars构成的图片灰度图"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
+        if chars in self.CHARSET:
+            chars = self.CHARSET[chars]
         image = getIMG(image, width, height * 2, resample=resample)
-        chars = ' .:-=+*#%@'
-        div = 26 # 256色分给chars，值越大越亮，字符越密
+        tmp = 255 / len(chars) # 26 # 256色分给chars，值越大越亮，字符越密
+        div = int(tmp) # 和下句共同构成math.ceil效果
+        if div != tmp:
+            div += 1
         width, height = image.size
         image = image.convert('L')
         pix = image.getdata()
