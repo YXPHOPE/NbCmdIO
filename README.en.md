@@ -18,40 +18,48 @@
 ## 🌟 Core Features
 
 ### ⚡ Chainable Calls
+
 - Set cursor positions and styles anytime, anywhere—quick, convenient, and easy to read!
+
 ```python
 prt[row, col].bold().fg_red("text")
 ```
 
 ### 🎨 True-Color RGB Terminal Styling
+
 - Supports 24 bit RGB and HEX formats for foreground and background colors
 - Includes default colors: Black, Red, Green, etc.
 - Supports effects like Bold, Underline, Italics, etc.
 - True-color image display, with each character representing two pixels for enhanced resolution
-![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
+  ![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
 - Displays ASCII grayscale images
 
 ### 🖱️ Character-Level Cursor Control
+
 - Precise character-level cursor positioning
 - Save/restore cursor positions
 - Get cursor position
 
 ### 📦 Dynamic Area Management
+
 - Create independently updatable regions
 - Supports nested regions
 
 ### ⌨️ Input Capture (In Progress)
+
 - Single-key unbuffered reading
 - Shortcut combination detection
 
 ## 🚀 Quick Start
 
 ### Installation
+
 ```bash
 pip install nbcmdio
 ```
 
 ### Basic Usage
+
 ```python
 from nbcmdio import prt
 
@@ -82,7 +90,7 @@ def NbCmdIO():
     prt[1].use(head_style).alignCenter(line1)# Use style in new region's first line for centered text
     prt[2].use(head_style).alignCenter(line2)
     prt[3, 3].fg_grey().drawHLine(WIDTH - 4)
-    
+  
     text = r"""
  _____    _____    _______ 
 |  _  \  |  _  \  |__   __|
@@ -97,7 +105,7 @@ def NbCmdIO():
     prt.fg_red().bold()[4, 8].printLines(chr1)
     prt.fg_green().bold()[4, 16].printLines(chr2)
     prt.fg_blue().bold()[4, 25].printLines(chr3)
-    
+  
     # Move cursor to next line in region, then exit
     prt[HEIGHT + 1].setOriginTerm().end()
     prt.gotoCenterOffset(70)
@@ -110,15 +118,23 @@ NbCmdIO()
 
 ## 🔮 Future Roadmap
 
-| Version | Features | Status |
-|------|------|------|
-| v1.0 | RGB Color Support, Area Management | ✅ Released |
-| v2.0 | Input Capture System | 📅 Planned |
-| v3.0 | Terminal UI Component Library | 💡 Conceptualizing |
+| Version | Features                           | Status              |
+| ------- | ---------------------------------- | ------------------- |
+| v1.0    | RGB Color Support, Area Management | ✅ Released         |
+| v1.9    | Progress bar                       | ⏳  Developing     |
+| v2.0    | Input Capture System               | 📅 Planned          |
+| v3.0    | Terminal UI Component Library      | 💡  Conceptualizing |
+
+**PLAN**
+
+* [ ] Progress bar
+* [ ] Customized Exception info
+* [ ] Async operation
 
 ## 🌍 Community Contributions
 
 We welcome all forms of contributions! Whether you:
+
 - Discover and report issues
 - Submit feature requests
 - Contribute code
@@ -147,9 +163,12 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.4 Added multi-line region printing, separated utils
 - 1.8.5 feat: drawHGrad (gradient), drawIMG (terminal image display)
 - 1.8.6 improve: added validation for loc, size
-        feat: drawImageStr
+  feat: drawImageStr
 - 1.8.63 feat: Output.playGif
 - 1.8.64 fix: height overflow in Output.valSize
+- 1.8.7 big change: Many functions have their parameter order as height before width.
+  add: Area, Output.clearRegion
+  fix: some little problem
 
 ## 🙏 Acknowledgments
 

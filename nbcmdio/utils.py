@@ -109,30 +109,23 @@ def genGradient(color_start, color_end, num):
     - num: 总共要生成的渐变色数量（包括起始和结束颜色）
 
     Returns:
-        包含起始颜色、渐变色和结束颜色的列表
-    """
-    # 将颜色值转换为浮点数以便计算
+        包含起始颜色、渐变色和结束颜色的列表"""
     r_start, g_start, b_start = color_start
     r_end, g_end, b_end = color_end
-
-    # 计算每个通道的步长
     num -= 1
     r_step = (r_end - r_start) / num
     g_step = (g_end - g_start) / num
     b_step = (b_end - b_start) / num
-
-    # 生成渐变色
     gradient = []
     for i in range(num + 1):
         r = int(r_start + r_step * i)
         g = int(g_start + g_step * i)
         b = int(b_start + b_step * i)
         gradient.append((r, g, b))
-
     return gradient
 
 
-def getIMG(img_path: Union[str, Image.Image], width:int, height=0x7FFFFFFF, resample=1):
+def getIMG(img_path: Union[str, Image.Image], height:int, width:int, resample=1):
     try:
         if isinstance(img_path,str):
             img = Image.open(img_path)
@@ -170,7 +163,7 @@ def sleepPrecise(seconds):
     while time.perf_counter() - start < seconds:
         pass
 
-# 通过耗时测试性能（本身也耗时，自测耗0.015s左右）
+# 通过耗时测试性能（本身也耗时，自测耗1μs左右）
 class Timer:
     def __init__(self) -> None:
         self.t1 = 0

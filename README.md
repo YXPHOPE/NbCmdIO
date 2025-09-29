@@ -18,40 +18,48 @@
 ## 🌟 核心功能亮点
 
 ### ⚡ 支持链式调用
+
 - 随时随地，设置光标位置、样式，方便快捷、清晰易读！
+
 ```python
 prt[row, col].bold().fg_red("text")
 ```
 
 ### 🎨 真彩RGB终端着色
+
 - 支持以24位RGB、HEX格式设定前景色、背景色
 - 支持默认颜色：Black、Red、Green等
 - 支持Bold、Underline、Italics等效果
 - 真彩显示图片，单字符显示两个像素点大大提升分辨率
-![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
+  ![nbcmdio.prt.drawIMG](./assets/drawDoraemon.png)
 - 显示ASCII灰度图片
 
 ### 🖱️ 字符级光标控制
+
 - 精确到字符的光标定位
 - 保存/恢复光标位置
 - 获取光标位置
 
 ### 📦 动态区域管理
+
 - 创建独立更新区域
 - 嵌套区域支持
 
 ### ⌨️ 输入捕获（...ing）
+
 - 单键无缓冲读取
 - 快捷键组合检测
 
 ## 🚀 快速入门
 
 ### 安装
+
 ```bash
 pip install nbcmdio
 ```
 
 ### 基础使用
+
 ```python
 from nbcmdio import prt
 
@@ -110,26 +118,32 @@ NbCmdIO()
 
 ## 🔮 未来路线图
 
-| 版本 | 功能 | 状态 |
-|------|------|------|
-| v1.0 | RGB色彩支持、区域管理 | ✅ 已发布 |
-| v2.0 | 输入捕获系统 |📅 规划中 |
-| v3.0 | 终端UI组件库 |💡 构思中 |
+| 版本 | 功能                  | 状态        |
+| ---- | --------------------- | ----------- |
+| v1.0 | RGB色彩支持、区域管理 | ✅ 已发布   |
+| v1.9 | Progress进度条        | ⏳  进行中 |
+| v2.0 | 输入捕获系统          | 📅 规划中   |
+| v3.0 | 终端UI组件库          | 💡  构思中 |
+
+**近期计划**
+
+* [ ] Progress bar
+* [ ] Customized Exception info
+* [ ] Async operation
 
 ## 🌍 社区贡献
 
 我们欢迎各种形式的贡献！无论您是：
+
 - 发现并报告问题
 - 提交功能请求
 - 贡献代码
 - 创作文档
 - 分享创意用例
 
-
 ## 📜 开源协议
 
 NbCmdIO采用**MIT许可证** - 您可以自由地在商业和个人项目中使用它！
-
 
 ## ✨ 立即体验终端魔法！
 
@@ -148,10 +162,13 @@ pip install nbcmdio
 - 1.8.3 修复部分问题，添加快捷ps1批处理文件，分离style
 - 1.8.4 添加多行区域打印，分离utils
 - 1.8.5 feat: drawHGrad(渐变), drawIMG(终端显示图片)
-- 1.8.6 improve: add valiation of loc, size
-        feat: drawImageStr
+- 1.8.6 improve: 增加 loc, size 的有效性验证
+  feat: drawImageStr ASCII绘制灰度图
 - 1.8.63 feat: Output.playGif, 播放gif动画
 - 1.8.64 fix: Output.valSize, 高度溢出
+- 1.8.7 big change: 许多函数把height参数提到width前了
+  add: Area, Output.clearRegion 清除区域
+  fix: 一些小问题
 
 ## 🙏 致谢
 

@@ -26,6 +26,32 @@ from .utils import *
 # 3. kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
 
 
+class Area:
+    """ 区域：row, col, height, width """
+    def __init__(self, row=1, col=1, height=0, width=0) -> None:
+        self.row = row
+        self.col = col
+        self.height = height
+        self.width = width
+    
+    def __str__(self):
+        return "{row: %d, col: %d, height: %d, width: %d}" % (self.row, self.col, self.height, self.width)
+    
+
+class Progress:
+    """ ## 进度条 """
+    CHARS = "▏▎▍▌▋▊▉█" # 其实是半宽字符
+    def __init__(self, **kwds) -> None:
+        """
+        Args:
+        - format (str): 进度条格式
+        """
+        self.format = kwds['format']
+
+    def update(self, percent):
+        pass
+
+
 class Output:
     """### 输出类Output()
     - 终端色彩：fg_rgb()、bg_hex() 等设定任意前景、背景色，内置bold()、fg_red()等
@@ -37,7 +63,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.64"
+    __version__ = "1.8.7"
     CHARSET = {
         'basic': ' .:-=+*#%@',
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
@@ -47,10 +73,12 @@ class Output:
         self.auto_reset = auto_reset
         self.size_row, self.size_col = 0, 0
         self.origin_row, self.origin_col = 0, 0
-        self.width, self.height = 0, 0
+        self.height, self.width = 0, 0
         self.getSize()
         self.setFile(stdout)
         self.__row, self.__col = 1, 1
+        """保存[] loc()设定的位置，print后即毁 变为默认值1,1。
+        未提供 row,col 的函数使用最近一次的此值，"""
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
         self.__acmlt = "mHG"  # 样式累积类型
@@ -78,9 +106,9 @@ class Output:
         if isinstance(file, IOBase) and file.writable():
             self.file = file
             self.write = file.write
-            return True
+            self.flush = file.flush
         else:
-            return False
+            raise TypeError("Invalid parameter: file, expected: instance of class based on IOBase.")
 
     # 清除相关
     def cls(self):
@@ -93,6 +121,7 @@ class Output:
         return self.loc(0).csi("2J")
 
     def clearAllBeforeCursor(self):
+        """ 光标留在原行 """
         return self.csi("1J")
 
     def clearAllAfterCursor(self):
@@ -137,6 +166,7 @@ class Output:
         - 将会清除self.__str中保存的样式
         - 默认自动reset重置样式"""
         self.__str = ""
+        self.__row = self.__col = 1
         s = sep.join([str(i) for i in args])
         self.write(s + end) # 在终端会自动flush输出
         return self.chkReset()
@@ -150,6 +180,7 @@ class Output:
         """重置所有样式"""
         # ? 是否先self.csi("0m")，再self.__str = ""，这样获取样式时就不会有开头的先自动重置
         self.__str = ""
+        self.__row = self.__col = 1
         self.write(self.RESET)
         return self
     
@@ -243,12 +274,14 @@ class Output:
         row += self.origin_row
         col += self.origin_col
         if row<0 or col<0 or row>self.size_row or col>self.size_col:
-            raise ValueError(f"loc of ({row}, {col}) from ({self.__row}, {self.__col}) is invalid!")
+            raise ValueError(f"Beyond the size: loc of ({row}, {col}) from origin({self.__row}, {self.__col}).")
         return self.csi(f"{row};{col}H")
 
     def col(self, n: int):
-        n += self.origin_col
-        return self.csi(f"{n}G")
+        col = n + self.origin_col
+        if col > self.size_col:
+            raise ValueError(f"Beyond the size: col {n} from origin({self.__row}, {self.__col}).")
+        return self.csi(f"{col}G")
 
     def gotoHead(self):
         """回到本行行首（基于坐标原点）"""
@@ -265,7 +298,7 @@ class Output:
             col = int(match.group(2)) - self.origin_col
             return row, col
         else:
-            raise ValueError(f"无法解析响应: {res!r}")
+            raise ValueError(f"Failed to get the location of cursor : {res!r}")
 
     # 光标相关
     def saveCursor(self):
@@ -447,10 +480,10 @@ class Output:
         """返回终端大小（rows，columns）"""
         try:
             size = get_terminal_size()
-            self.size_col = columns = size.columns
             self.size_row = rows = size.lines
-            self.width = self.size_col - self.origin_col
+            self.size_col = columns = size.columns
             self.height = self.size_row - self.origin_row
+            self.width = self.size_col - self.origin_col
         except OSError:
             return 30, 120
         return rows, columns
@@ -498,17 +531,22 @@ class Output:
         maxh = self.height - row
         maxw = self.width - col
         # 如果限制换行，则高度限制在终端内
-        if h_restricted and (height <= 0 or height > maxh):
-            height = maxh
-        # 不限制高度，但默认不超过终端高度（终端占有一行用于输入）
+        if h_restricted:
+            if height <= 0:
+                height = maxh
+            elif height > maxh:
+                raise ValueError(f"Beyond the region: Height {height} has exceeded!")
+        # 不限制高度，但默认不超过终端高度
         if height <= 0: 
-            height = self.size_row - 1
-        if width <= 0 or width > maxw: width = maxw
+            height = self.height
+        if width <= 0: width = maxw
+        elif width > maxw:
+            raise ValueError(f"Beyond the region: Width {width} has exceeded!")
         return (height, width)
 
-    def setOrigin(self, row: int, col: int, width=0, height=0, base=0):
+    def setOrigin(self, row: int, col: int, height=0, width=0, base=0):
         """### 设定新的坐标原点与宽高
-        - width, height：未设定则使用终端剩余所有大小
+        - height, width：未设定则使用终端剩余所有大小
         - base: 0基于Terminal左上角，1基于当前origin位置"""
         if base:
             row += self.origin_row
@@ -517,8 +555,8 @@ class Output:
             raise ValueError("Given size is bigger than terminal size!")
         self.origin_row = row
         self.origin_col = col
-        self.width = width or self.size_col - self.origin_col
         self.height = height or self.size_row - self.origin_row
+        self.width = width or self.size_col - self.origin_col
         self.loc(0,0)
         return self
 
@@ -527,8 +565,8 @@ class Output:
         self.origin_row = 0
         self.origin_col = 0
         self.getSize()
-        self.width = self.size_col
         self.height = self.size_row
+        self.width = self.size_col
         return self
 
     def drawNL(self, nline=1):
@@ -547,17 +585,19 @@ class Output:
     def drawVLine(self, length: int, row=-1, col=-1, mark="│"):
         """在给定位置/之前设定位置生成给定长度的**竖线**"""
         row, col = self.valLoc(row, col)
+        if row + length - 1> self.height:
+            raise ValueError(f"Beyond the region: Given length {length} from row {row} > height {self.height}!")
         for i in range(length):
-            self.col(col).p(mark+"\n")
+            self[row + i, col].p(mark)
         return self.chkReset()
 
-    def drawRect(self, width: int, height: int, row=-1, col=-1, as_origin=True):
+    def drawRect(self, height: int, width: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
         row, col = self.valLoc(row, col)
         # ? 4条边占位，实际w+2，h+2，可写区域为w，h，有超过终端边界风险
-        height, width = self.valSize(row, col, height, width, True)
+        height, width = self.valSize(row, col, width, height, True)
         if as_origin:
-            self.setOrigin(row, col, width, height)
+            self.setOrigin(row, col, height, width, True)
             row = col = 0
         reset = self.auto_reset
         self.autoResetOff()
@@ -569,7 +609,7 @@ class Output:
         self.auto_reset = reset
         return self[1, 1]
 
-    def printLines(self, lines: Union[str, list[str]], width=0, height=0, row=-1, col=-1, overflow=1):
+    def printLines(self, lines: Union[str, list[str]], height=0, width=0, row=-1, col=-1, overflow=1):
         """在给定坐标处左对齐显示多行文本（直接打印多行文本会使后面的行回到终端最左侧）
         - lines: str | list[str], str会自动被splitlines
         - width: lines为str时生效，换行分割宽度（自身换行符处也会被分割，请勿包含\\t）\n
@@ -617,10 +657,10 @@ class Output:
             string = " " * length
         string = padString(string, length)
         if not length:
-            raise ValueError("Parameter length and string are missed.")
+            raise ValueError("Parameter length and string not found.")
         row, col = self.valLoc(row, col)
         if length + col - 1 > self.width:
-            raise ValueError("Beyond the region!")
+            raise ValueError(f"Beyond the region: length {length} from col {col}.")
         gradient = genGradient(color_start, color_end, length)
         i, n_wc, is_wc, line = 0, 0, False, ""
         while i < length:
@@ -638,18 +678,20 @@ class Output:
         """产生一条给定长度的垂直渐变色带"""
         if length <= 0:
             raise ValueError("Parameter length are invalid.")
-        length *= 2
-        gradient = genGradient(color_start, color_end, length)
+        double = length * 2
+        gradient = genGradient(color_start, color_end, double)
         row, col = self.valLoc(row, col)
-        for i in range(0, length, 2):
-            self.col(col)(bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄\033[0m\n")
+        if row + length - 1> self.height:
+            raise ValueError(f"Beyond the region: Given length {length} from row {row} > height {self.height}!")
+        for i in range(0, double, 2):
+            self[row + i // 2, col](bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄")
         return self
 
-    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, resample=1):
+    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, height=0, width=0, resample=1):
         """### 在终端绘制图片
         - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
-        - width, height: 最大宽度、高度(字符数，0表示自动)
+        - height, width: 最大宽度、高度(字符数，0表示自动)
         - resample: 图片重采样方法（向下质量越高，默认1，保留锯齿棱角选0）
             - NEAREST = 0
             - BOX = 4
@@ -659,10 +701,9 @@ class Output:
             - LANCZOS = 1
 
         Returns: (height, width) 终端显示图片的实际大小"""
-        self.getSize()
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
-        img = getIMG(img_path, width, height * 2, resample=resample)
+        img = getIMG(img_path, height=height * 2, width=width, resample=resample)
         width, height = img.size # 经过getIMG处理，height一定为偶数
         pixels = img.load()
         # 定位光标
@@ -674,9 +715,9 @@ class Output:
                 lower = fg_rgb(pixels[x, y + 1])
                 # 使用Unicode上半个字符和下半个字符█▄▀ (也可以用这个画Rect)
                 line += upper + lower + "▄"
-            self.col(col)(line).end()
+            self[row + y // 2, col](line)
         self.chkReset()
-        return (row, col, height//2, width)
+        return Area(row, col, height // 2, width)
     
     def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
         """ ### 使用ASCII字符绘制灰度图
@@ -692,7 +733,7 @@ class Output:
         height, width = self.valSize(row, col, height, width)
         if chars in self.CHARSET:
             chars = self.CHARSET[chars]
-        image = getIMG(image, width, height * 2, resample=resample)
+        image = getIMG(image, height=height * 2, width=width, resample=resample)
         tmp = 255 / len(chars) # 256色分给chars，值越大越亮，字符越密
         div = int(tmp) # 和下句共同构成math.ceil效果
         if div != tmp:
@@ -701,7 +742,7 @@ class Output:
         image = image.convert('L')
         pix = image.getdata()
 
-        string, line_counter = '', 0
+        string = ''
         if invert_background:
             chars = list(reversed(chars))
         for r in range(0, height, 2):
@@ -710,9 +751,9 @@ class Output:
                 i = r * width + c # 2行取平均值
                 d = (pix[i] + pix[i+width]) // 2 // div
                 line += chars[d]
+            self[row + r // 2, col].p(line)
             line += "\n"
             string += line
-            self.p(line)
         self.chkReset()
         return string
 
@@ -727,9 +768,10 @@ class Output:
         self.hideCursor()
         spf = 1 / self.fps
         t0 = time.perf_counter()
+        frames = int(gif.n_frames)
         try:
             frame_index = 0
-            for i in range(gif.n_frames):
+            for i in range(frames):
                 gif.seek(i)
                 frame = gif.copy()
                 img = frame.convert('RGB')
@@ -742,7 +784,7 @@ class Output:
             self.printLines(f'Failed to play "{gif_path}": {e}.', width=width, row=row, col=col)
         total_time = time.perf_counter() - t0
         self.showCursor()
-        return gif.n_frames, total_time
+        return frames, total_time, Area(row, col, height, width)
     
     def clearRegion(self, height:int, width:int, row=-1, col=-1):
         """### 清除一个区域
@@ -751,10 +793,9 @@ class Output:
         height, width = self.valSize(row, col, height, width)
         line = ' ' * width
         for i in range(height):
-            self.col(col).p(line + "\n")
+            self[row + i, col].p(line)
         return self
         
-
     # with上下文管理
     def __enter__(self):
         self.__auto_reset = self.auto_reset
