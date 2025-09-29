@@ -177,3 +177,43 @@ class Timer:
         print(f"{self.t2 - self.t1:.9f}")
 
 TIMER = Timer()
+
+
+class FrameTimer:
+    def __init__(self, spf: Union[int, float], num: int, iterator=None) -> None:
+        """ ## 帧计时器 (确保每一帧用时相同)
+        - spf: 每帧用时，等价于 1s / fps
+        - num: 总帧数
+        - iterator: 可选，迭代器 或 可索引对象，长度必须>=num
+        
+        for i, v in FrameTimer:
+            i = 当前帧数，从0到num-1
+            v = None，或iterator迭代到相同次数的值，或对应下标的值"""
+        self.spf = spf
+        self.num = num
+        self.cur = 0
+        self.t0 = 0
+        self.iterator = iterator
+        if self.iterator == None:
+            pass
+        elif hasattr(self.iterator, '__next__'):
+            self.__getiter = lambda: self.iterator.__next__()
+        elif hasattr(self.iterator, '__getitem__'):
+            self.__getiter = lambda: self.iterator[self.cur - 1]
+
+    def __iter__(self):
+        return self
+    
+    def __next__(self):
+        if self.cur == 0:
+            self.t0 = time.perf_counter()
+        if self.cur >= self.num:
+            raise StopIteration
+        i = self.cur
+        self.cur += 1
+        t = i * self.spf + self.t0 - time.perf_counter()
+        if t > 0: sleepPrecise(t)
+        return i, self.__getiter()
+    
+    def __getiter(self):
+        return None

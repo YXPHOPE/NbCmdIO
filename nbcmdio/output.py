@@ -700,7 +700,7 @@ class Output:
             - BICUBIC = 3
             - LANCZOS = 1
 
-        Returns: (height, width) 终端显示图片的实际大小"""
+        Returns: Area 终端显示图片的位置、大小"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
         img = getIMG(img_path, height=height * 2, width=width, resample=resample)
@@ -761,7 +761,7 @@ class Output:
         """### 播放gif动画
         - 将隐藏光标，播放完毕后恢复
         - Output.fps 设定帧率
-        - Returns: (帧数，播放用时) 用时不包准备时间"""
+        - Returns: (帧数，播放用时，播放Area) 用时不包准备时间"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
         gif = Image.open(gif_path)
@@ -770,16 +770,11 @@ class Output:
         t0 = time.perf_counter()
         frames = int(gif.n_frames)
         try:
-            frame_index = 0
-            for i in range(frames):
+            for i, _ in FrameTimer(spf, frames):
                 gif.seek(i)
-                frame = gif.copy()
-                img = frame.convert('RGB')
+                img = gif.copy()
+                # img = img.convert('RGB')
                 self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
-                frame_index += 1 - 1
-                t = time.perf_counter()
-                residue = t0 + spf*(i+1) - t
-                if residue > 0: sleepPrecise(residue)
         except Exception as e:
             self.printLines(f'Failed to play "{gif_path}": {e}.', width=width, row=row, col=col)
         total_time = time.perf_counter() - t0
