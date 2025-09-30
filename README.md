@@ -169,6 +169,9 @@ pip install nbcmdio
 - 1.8.7 big change: 许多函数把height参数提到width前了
   add: Area, Output.clearRegion 清除区域
   fix: 一些小问题
+- 1.8.71 feat: FrameTimer, 用于Output.drawGif
+- 1.8.72 add: utils.getIMG支持url;
+  improve: utils.FrameTimer支持特定帧时长; Output.drawGif使用gif帧时长.
 
 ## 🙏 致谢
 

@@ -2,7 +2,7 @@ import re
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.8.7"
+VERSION = "1.8.72"
 long_desc = open("README.en.md", encoding="utf-8").read()
 
 

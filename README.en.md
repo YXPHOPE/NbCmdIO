@@ -169,6 +169,9 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.7 big change: Many functions have their parameter order as height before width.
   add: Area, Output.clearRegion
   fix: some little problem
+- 1.8.71 feat: FrameTimer, used in Output.drawGif
+- 1.8.72 add: utils.getIMG support url;
+improve: utils.FrameTimer support custom duration for each frame; Output.drawGif uses gif duration.
 
 ## 🙏 Acknowledgments
 

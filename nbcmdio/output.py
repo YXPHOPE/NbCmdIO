@@ -63,7 +63,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.7"
+    __version__ = "1.8.72"
     CHARSET = {
         'basic': ' .:-=+*#%@',
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
@@ -757,24 +757,27 @@ class Output:
         self.chkReset()
         return string
 
-    def playGif(self, gif_path, row=-1, col=-1, width=0, height=0):
+    def playGif(self, gif_path, row=-1, col=-1, width=0, height=0, repeat=1):
         """### 播放gif动画
         - 将隐藏光标，播放完毕后恢复
         - Output.fps 设定帧率
         - Returns: (帧数，播放用时，播放Area) 用时不包准备时间"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
-        gif = Image.open(gif_path)
+        gif = toImage(gif_path)
         self.hideCursor()
-        spf = 1 / self.fps
-        t0 = time.perf_counter()
         frames = int(gif.n_frames)
+        t0 = time.perf_counter()
         try:
-            for i, _ in FrameTimer(spf, frames):
-                gif.seek(i)
-                img = gif.copy()
-                # img = img.convert('RGB')
-                self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
+            for r in range(repeat):
+                ft = FrameTimer(frames)
+                for i, _ in ft:
+                    gif.seek(i)
+                    img = gif.copy()
+                    # img = img.convert('RGB')
+                    duration = gif.info.get('duration', 0) / 1000
+                    self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
+                    ft.frameTime(duration)
         except Exception as e:
             self.printLines(f'Failed to play "{gif_path}": {e}.', width=width, row=row, col=col)
         total_time = time.perf_counter() - t0

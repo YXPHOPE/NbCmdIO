@@ -1,8 +1,11 @@
 import re
+import os
+import time
+import requests
+import io
 from typing import Union
 from PIL import Image
 from unicodedata import east_asian_width
-import time
 
 # ------------------------------字符类处理函数---------------------------------
 TabWidth = 4
@@ -124,18 +127,28 @@ def genGradient(color_start, color_end, num):
         gradient.append((r, g, b))
     return gradient
 
-
-def getIMG(img_path: Union[str, Image.Image], height:int, width:int, resample=1):
+def toImage(img_path):
     try:
         if isinstance(img_path,str):
-            img = Image.open(img_path)
+            # 使用Path的请先str()转为字符串
+            if os.path.exists(img_path):
+                img = Image.open(img_path)
+            elif img_path.startswith("http"):
+                res = requests.get(img_path)
+                img = Image.open(io.BytesIO(res.content))
+            else:
+                raise ValueError(f'Not a vaild path or url: {img_path}.')
         elif isinstance(img_path, Image.Image):
             img = img_path
         else:
             raise TypeError("Invalid type!")
     except Exception as e:
         raise ValueError(f"Parameter img_path({img_path}) is not "
-                         "a valid image path or instance of Image: {e}.")
+                         "a valid image path or instance of Image.")
+    return img
+
+def getIMG(img_path: Union[str, Image.Image], height:int, width:int, resample=1):
+    img = toImage(img_path)
     # 计算缩放比例
     img_width, img_height = img.size
     ratio_width = width / img_width
@@ -180,8 +193,8 @@ TIMER = Timer()
 
 
 class FrameTimer:
-    def __init__(self, spf: Union[int, float], num: int, iterator=None) -> None:
-        """ ## 帧计时器 (确保每一帧用时相同)
+    def __init__(self, num: int, spf: Union[int, float]=0, iterator=None) -> None:
+        """ ## 帧计时器 (确保每一帧间隔相同)
         - spf: 每帧用时，等价于 1s / fps
         - num: 总帧数
         - iterator: 可选，迭代器 或 可索引对象，长度必须>=num
@@ -193,6 +206,8 @@ class FrameTimer:
         self.num = num
         self.cur = 0
         self.t0 = 0
+        self.total_spent = 0
+        self.last_frame_start = 0
         self.iterator = iterator
         if self.iterator == None:
             pass
@@ -207,13 +222,26 @@ class FrameTimer:
     def __next__(self):
         if self.cur == 0:
             self.t0 = time.perf_counter()
+            self.last_frame_start = self.t0
+            self.cur += 1
+            return 0, self.__getiter()
         if self.cur >= self.num:
             raise StopIteration
         i = self.cur
         self.cur += 1
-        t = i * self.spf + self.t0 - time.perf_counter()
+        now = time.perf_counter()
+        if self.spf:
+            self.total_spent = now - self.t0
+            t = i * self.spf - self.total_spent
+        else:
+            frame_spent = now - self.last_frame_start
+            t = self.__frametime - frame_spent
         if t > 0: sleepPrecise(t)
+        self.last_frame_start = time.perf_counter()
         return i, self.__getiter()
     
     def __getiter(self):
         return None
+    
+    def frameTime(self, t):
+        self.__frametime = t
