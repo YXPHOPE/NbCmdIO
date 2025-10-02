@@ -15,6 +15,8 @@
 
 **NbCmdIO** 是一个强大的Python库，将普通的命令行终端转变为充满活力的视觉画布和强大的交互平台！告别单调的黑白输出，迎接RGB真彩世界；告别笨重的文本界面，迎接精准的光标控制和输入捕获能力。
 
+**关键字**：Terminal, CSI escape sequence, print, colorful, input, cursor, draw, Image, Gif
+
 ## 🌟 核心功能亮点
 
 ### ⚡ 支持链式调用

@@ -15,6 +15,8 @@
 
 **NbCmdIO** is a powerful Python library that transforms ordinary command-line terminals into vibrant visual canvases and robust interactive platforms! Say goodbye to monotonous black-and-white outputs and welcome the world of true RGB colors; farewell to clunky text interfaces and embrace precise cursor control and input capture capabilities.
 
+**Keywords**：Terminal, CSI escape sequence, print, colorful, input, cursor, draw, Image, Gif
+
 ## 🌟 Core Features
 
 ### ⚡ Chainable Calls
