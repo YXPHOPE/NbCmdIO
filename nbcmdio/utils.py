@@ -11,10 +11,16 @@ from unicodedata import east_asian_width
 TabWidth = 4
 Tab = " " * TabWidth
 
+CHAR_WIDTH = {
+    '—': 1
+}
+
 def getCharWidth(c: str):
     """返回字符宽度
     F W A ：全宽，Na、H：半宽，N：0
     """
+    if c in CHAR_WIDTH:
+        return CHAR_WIDTH[c]
     w = east_asian_width(c)
     if w == "N":
         # \t 应该返回多少宽度？
@@ -75,8 +81,11 @@ def splitLinesByWidth(s: str, width: int) -> list[str]:
         if chr != "\n":
             line += chr
             lwidth += getCharWidth(chr)
-        if lwidth >= width or chr == "\n":
-            # ? 如果只剩1宽度，加入一个双宽字符，会溢出1宽度
+        if lwidth > width: # 最后一个字符是双宽字符导致宽度溢出时，使其换行
+            res.append(line[:-1])
+            line = line[-1]
+            lwidth = getCharWidth(line)
+        elif lwidth == width or chr == "\n":
             res.append(line)
             line = ""
             lwidth = 0
