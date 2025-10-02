@@ -71,13 +71,13 @@ def NbCmdIO():
     prt.cls().setTitle("NbCmdIO")
     # 在第2行 加粗 文字蓝色 居中显示  背景色渐变
     title = "        NbCmdIO  by  Cipen        "
-    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title))
+    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title), 2)
     prt.drawHGrad((230, 92, 0), (249, 212, 35), string=title)
     WIDTH = 40
     HEIGHT = 10
     center_offset = (prt.size_col - WIDTH) // 2
     # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
-    prt.fg_hex(lavender)[3, center_offset].drawRect(WIDTH, HEIGHT)
+    prt.fg_hex(lavender)[3, center_offset].drawRect(HEIGHT, WIDTH)
     prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
     b2 = "  "
     # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
@@ -174,6 +174,7 @@ pip install nbcmdio
 - 1.8.71 feat: FrameTimer, 用于Output.drawGif
 - 1.8.72 add: utils.getIMG支持url;
   improve: utils.FrameTimer支持特定帧时长; Output.drawGif使用gif帧时长.
+- 1.8.73 fix: Output.gotoCenterOffset; 高度溢出;
 
 ## 🙏 致谢
 

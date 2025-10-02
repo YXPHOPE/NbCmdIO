@@ -71,13 +71,13 @@ def NbCmdIO():
     prt.cls().setTitle("NbCmdIO")
     # On line 2, bold, blue text, center-aligned with gradient background
     title = "        NbCmdIO  by  Cipen        "
-    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title))
+    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title), 2)
     prt.drawHGrad((230, 92, 0), (249, 212, 35), string=title)
     WIDTH = 40
     HEIGHT = 10
     center_offset = (prt.size_col - WIDTH) // 2
     # Draw a rectangle with foreground #CCF at (3, center_offset) and set the new region to this rectangle
-    prt.fg_hex(lavender)[3, center_offset].drawRect(WIDTH, HEIGHT)
+    prt.fg_hex(lavender)[3, center_offset].drawRect(HEIGHT, WIDTH)
     prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
     b2 = "  "
     # Enter context (styles aren't auto-reset inside), add square color blocks at the 4 corners
@@ -174,6 +174,7 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.71 feat: FrameTimer, used in Output.drawGif
 - 1.8.72 add: utils.getIMG support url;
 improve: utils.FrameTimer support custom duration for each frame; Output.drawGif uses gif duration.
+- 1.8.73 fix: Output.gotoCenterOffset; height overflow;
 
 ## 🙏 Acknowledgments
 
