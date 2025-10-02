@@ -105,7 +105,7 @@ def hex2RGB(hex: str):
     return [int(i, 16) for i in hexes]
 
 
-def genGradient(color_start, color_end, num):
+def genGradient(color_start: RGB, color_end: RGB, num: int):
     """生成两个RGB颜色之间的渐变色列表
     - color_start: 起始颜色，格式为 (r, g, b)
     - color_end: 结束颜色，格式为 (r, g, b)
@@ -127,7 +127,7 @@ def genGradient(color_start, color_end, num):
         gradient.append((r, g, b))
     return gradient
 
-def toImage(img_path):
+def toImage(img_path: Union[str, Image.Image]):
     try:
         if isinstance(img_path,str):
             # 使用Path的请先str()转为字符串
@@ -168,7 +168,7 @@ def getIMG(img_path: Union[str, Image.Image], height:int, width:int, resample=1)
 
 PRECISE = 1 / 64 # windows下的时间精度
 
-def sleepPrecise(seconds):
+def sleepPrecise(seconds: float):
     start = time.perf_counter()
     n = seconds // PRECISE - 1
     if n > 0:
@@ -194,54 +194,54 @@ TIMER = Timer()
 
 class FrameTimer:
     def __init__(self, num: int, spf: Union[int, float]=0, iterator=None) -> None:
-        """ ## 帧计时器 (确保每一帧间隔相同)
-        - spf: 每帧用时，等价于 1s / fps
+        """ ## 帧计时器 (确保每一帧使用准确间隔)
         - num: 总帧数
+        - spf: 每帧用时，等价于 1s / fps。未指定时请通过frameTime(seconds)指定当前帧应该耗费的时间
         - iterator: 可选，迭代器 或 可索引对象，长度必须>=num
         
         for i, v in FrameTimer:
             i = 当前帧数，从0到num-1
             v = None，或iterator迭代到相同次数的值，或对应下标的值"""
-        self.spf = spf
-        self.num = num
-        self.cur = 0
-        self.t0 = 0
-        self.total_spent = 0
-        self.last_frame_start = 0
-        self.iterator = iterator
-        if self.iterator == None:
+        self.__spf = spf
+        self.__num = num
+        self.__cur = 0
+        self.__t0 = 0
+        self.__total_spent = 0
+        self.__last_frame_start = 0
+        self.__iterator = iterator
+        if self.__iterator == None:
             pass
-        elif hasattr(self.iterator, '__next__'):
-            self.__getiter = lambda: self.iterator.__next__()
-        elif hasattr(self.iterator, '__getitem__'):
-            self.__getiter = lambda: self.iterator[self.cur - 1]
+        elif hasattr(self.__iterator, '__next__'):
+            self.__getiter = lambda: self.__iterator.__next__()
+        elif hasattr(self.__iterator, '__getitem__'):
+            self.__getiter = lambda: self.__iterator[self.__cur - 1]
 
     def __iter__(self):
         return self
     
     def __next__(self):
-        if self.cur == 0:
-            self.t0 = time.perf_counter()
-            self.last_frame_start = self.t0
-            self.cur += 1
+        if self.__cur == 0:
+            self.__t0 = time.perf_counter()
+            self.__last_frame_start = self.__t0
+            self.__cur += 1
             return 0, self.__getiter()
-        if self.cur >= self.num:
+        if self.__cur >= self.__num:
             raise StopIteration
-        i = self.cur
-        self.cur += 1
+        i = self.__cur
+        self.__cur += 1
         now = time.perf_counter()
-        if self.spf:
-            self.total_spent = now - self.t0
-            t = i * self.spf - self.total_spent
+        if self.__spf:
+            self.__total_spent = now - self.__t0
+            t = i * self.__spf - self.__total_spent
         else:
-            frame_spent = now - self.last_frame_start
+            frame_spent = now - self.__last_frame_start
             t = self.__frametime - frame_spent
         if t > 0: sleepPrecise(t)
-        self.last_frame_start = time.perf_counter()
+        self.__last_frame_start = time.perf_counter()
         return i, self.__getiter()
     
     def __getiter(self):
         return None
     
-    def frameTime(self, t):
-        self.__frametime = t
+    def frameTime(self, seconds: float):
+        self.__frametime = seconds
