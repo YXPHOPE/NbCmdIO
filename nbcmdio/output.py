@@ -488,16 +488,19 @@ class Output:
             return 30, 120
         return rows, columns
 
-    def gotoCenterOffset(self, len_str: int):
+    def gotoCenterOffset(self, len_str: int, row=-1):
         """光标到基于原点、使所给文本长度居中的 offset 位置"""
         width = self.width or self.size_col
         if len_str >= width:
             offset = 0
         else:
             offset = (width - len_str) // 2
-        if self.width != self.size_col:
-            offset += 1  # 在新的origin中，第0列被|占据
-        return self.col(offset)
+        offset += 1 # 前offset个字符均为空格，到下一个字符开始写入
+        if row >= 0:
+            self[row, offset]
+        else:
+            self.col(offset)
+        return self
 
     def alignCenter(self, s: str):
         """使文本居中对齐显示
@@ -527,15 +530,17 @@ class Output:
             self.loc(row, col)
         return (row, col)
     
-    def valSize(self, row: int, col: int, height: int, width: int, h_restricted=False):
-        maxh = self.height - row
-        maxw = self.width - col
+    def valSize(self, row: int, col: int, height: int, width: int, h_overflow=0):
+        """验证并返回合适的大小
+        - h_overflow: 0 不允许溢出，1 允许"""
+        maxh = self.height - row + 1
+        maxw = self.width - col + 1
         # 如果限制换行，则高度限制在终端内
-        if h_restricted:
-            if height <= 0:
+        if h_overflow == 0:
+            if height <= 0 or height > maxh:
                 height = maxh
-            elif height > maxh:
-                raise ValueError(f"Beyond the region: Height {height} has exceeded!")
+            # elif height > maxh:
+            #     raise ValueError(f"Beyond the region: Height {height} has exceeded!")
         # 不限制高度，但默认不超过终端高度
         if height <= 0: 
             height = self.height
@@ -582,20 +587,23 @@ class Output:
         self.print(mark * length)
         return self
 
-    def drawVLine(self, length: int, row=-1, col=-1, mark="│"):
-        """在给定位置/之前设定位置生成给定长度的**竖线**"""
+    def drawVLine(self, length: int, row=-1, col=-1, mark="│", overflow=0):
+        """在给定位置/之前设定位置生成给定长度的**竖线**
+        - mark="|": 画线使用的字符
+        - overflow: 0不允许超出，1超出则换行打印"""
         row, col = self.valLoc(row, col)
-        if row + length - 1> self.height:
+        if overflow==0 and row + length - 1> self.height:
             raise ValueError(f"Beyond the region: Given length {length} from row {row} > height {self.height}!")
-        for i in range(length):
-            self[row + i, col].p(mark)
+        for i in range(length-1):
+            self.col(col).p(mark).drawNL()
+        self.col(col).p(mark)
         return self.chkReset()
 
     def drawRect(self, height: int, width: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
         row, col = self.valLoc(row, col)
         # ? 4条边占位，实际w+2，h+2，可写区域为w，h，有超过终端边界风险
-        height, width = self.valSize(row, col, width, height, True)
+        height, width = self.valSize(row, col, height, width)
         if as_origin:
             self.setOrigin(row, col, height, width, True)
             row = col = 0
@@ -638,12 +646,12 @@ class Output:
             if overflow == 1:
                 lines = lines[:height]
                 lastline = lines[height-1]
-                l = splitLinesByWidth(lastline, width)[0]
                 lines[height-1] = lastline[:-3]+"..."
             elif overflow == 0:
                 lines = lines[:height]
-        for i in range(len(lines)):
+        for i in range(len(lines)-1):
             self.col(col).p(lines[i] + "\n")
+        self.col(col).p(lines[-1])
         return self.chkReset()
 
     def drawHGrad(self, color_start: RGB, color_end: RGB, length=0, string="", row=-1, col=-1):
@@ -660,7 +668,7 @@ class Output:
             raise ValueError("Parameter length and string not found.")
         row, col = self.valLoc(row, col)
         if length + col - 1 > self.width:
-            raise ValueError(f"Beyond the region: length {length} from col {col}.")
+            raise ValueError(f"Beyond the region: length {length} from col {col} > {self.width}.")
         gradient = genGradient(color_start, color_end, length)
         i, n_wc, is_wc, line = 0, 0, False, ""
         while i < length:
@@ -674,20 +682,22 @@ class Output:
             i += 1
         return self(line)
 
-    def drawVGrad(self, color_start: RGB, color_end: RGB, length=0, row=-1, col=-1):
-        """产生一条给定长度的垂直渐变色带"""
+    def drawVGrad(self, color_start: RGB, color_end: RGB, length=0, row=-1, col=-1, overflow=0):
+        """产生一条给定长度的垂直渐变色带
+        - overflow: 0不允许超出，1超出则换行打印"""
         if length <= 0:
             raise ValueError("Parameter length are invalid.")
         double = length * 2
         gradient = genGradient(color_start, color_end, double)
         row, col = self.valLoc(row, col)
-        if row + length - 1> self.height:
+        if overflow==0 and row + length - 1> self.height:
             raise ValueError(f"Beyond the region: Given length {length} from row {row} > height {self.height}!")
-        for i in range(0, double, 2):
-            self[row + i // 2, col](bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄")
+        for i in range(0, double-2, 2):
+            self.col(col)(bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄").drawNL()
+        self.col(col)(bg_rgb(gradient[-2]) + fg_rgb(gradient[-1]) + "▄")
         return self
 
-    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, height=0, width=0, resample=1):
+    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, height=0, width=0, resample=1, overflow=0):
         """### 在终端绘制图片
         - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
@@ -699,13 +709,15 @@ class Output:
             - HAMMING = 5
             - BICUBIC = 3
             - LANCZOS = 1
+        - overflow=0: 0不允许高度超出，1超出则换行打印 （宽度超出没意义）
 
-        Returns: Area 终端显示图片的位置、大小"""
+        Returns: string, Area 图像转义序列，终端显示图片的位置、大小"""
         row, col = self.valLoc(row, col)
-        height, width = self.valSize(row, col, height, width)
+        height, width = self.valSize(row, col, height, width, h_overflow=overflow)
         img = getIMG(img_path, height=height * 2, width=width, resample=resample)
         width, height = img.size # 经过getIMG处理，height一定为偶数
         pixels = img.load()
+        string = ""
         # 定位光标
         for y in range(0, height, 2):  # 每两行一组
             line = ""
@@ -715,11 +727,13 @@ class Output:
                 lower = fg_rgb(pixels[x, y + 1])
                 # 使用Unicode上半个字符和下半个字符█▄▀ (也可以用这个画Rect)
                 line += upper + lower + "▄"
-            self[row + y // 2, col](line)
+            string += line+"\n"
+            self.col(col)(line)
+            if y != height-2: self.drawNL()
         self.chkReset()
-        return Area(row, col, height // 2, width)
+        return string, Area(row, col, height // 2, width)
     
-    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False) -> str:
+    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False, overflow=0) -> str:
         """ ### 使用ASCII字符绘制灰度图
         - image: 图片路径 / Image
         - row, col: 绘制起点位置(默认使用loc设定的光标位置)
@@ -727,10 +741,11 @@ class Output:
         - chars：优先使用Output.CHARSET中定义的字符集，如果不存在则使用给定的（由暗至亮排列），默认为basic: ' .:-=+*#%@'
         - resample: 图片重采样方法（向下质量越高，默认1，保留锯齿棱角选0）
         - invert_background=False 反相
+        - overflow=0: 0不允许高度超出，1超出则换行打印 
         
         Returns: str 用chars构成的图片灰度图"""
         row, col = self.valLoc(row, col)
-        height, width = self.valSize(row, col, height, width)
+        height, width = self.valSize(row, col, height, width, h_overflow=overflow)
         if chars in self.CHARSET:
             chars = self.CHARSET[chars]
         image = getIMG(image, height=height * 2, width=width, resample=resample)
@@ -752,15 +767,14 @@ class Output:
                 d = (pix[i] + pix[i+width]) // 2 // div
                 line += chars[d]
             self[row + r // 2, col].p(line)
-            line += "\n"
-            string += line
+            if r != height-2: self.drawNL()
+            string += line + "\n"
         self.chkReset()
         return string
 
     def playGif(self, gif_path, row=-1, col=-1, width=0, height=0, repeat=1):
         """### 播放gif动画
         - 将隐藏光标，播放完毕后恢复
-        - Output.fps 设定帧率
         - Returns: (帧数，播放用时，播放Area) 用时不包准备时间"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
@@ -832,13 +846,13 @@ def NbCmdIO():
     prt.cls().setTitle("NbCmdIO")
     # 在第2行 加粗 文字蓝色 居中显示  背景色渐变
     title = "        NbCmdIO  by  Cipen        "
-    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title))
+    prt[2].bold().fg_hex("#00f").gotoCenterOffset(getStringWidth(title), 2)
     prt.drawHGrad((230, 92, 0), (249, 212, 35), string=title)
     WIDTH = 40
     HEIGHT = 10
     center_offset = (prt.size_col - WIDTH) // 2
     # 以前景#CCF 在 3,centerOffset 处 绘制指定大小的方形，并默认设定新区域 为该方形
-    prt.fg_hex(lavender)[3, center_offset].drawRect(WIDTH, HEIGHT)
+    prt.fg_hex(lavender)[3, center_offset].drawRect(HEIGHT, WIDTH)
     prt.fg_blue()[0, 3](" NbCmdIO ").bold()[0, WIDTH - 8](prt.__version__)
     b2 = "  "
     # 进入上下文（里面不会自动重置样式），在区域的4个角添加方形色块
