@@ -1,11 +1,22 @@
 import re
 import os
 import time
-import requests
 import io
+import ctypes
+import requests
 from typing import Union
 from PIL import Image
 from unicodedata import east_asian_width
+from platform import system as getOS
+
+__os = getOS()
+IS_WIN = IS_LINUX = IS_MAC = False
+if __os == "Windows":
+    IS_WIN = True
+elif __os == "Linux":
+    IS_LINUX = True
+elif __os == "Darwin":
+    IS_MAC = True
 
 # ------------------------------字符类处理函数---------------------------------
 TabWidth = 4
@@ -175,28 +186,47 @@ def getIMG(img_path: Union[str, Image.Image], height:int, width:int, resample=1)
 
 # ------------------------------时间类处理函数---------------------------------
 
-PRECISE = 1 / 64 # windows下的时间精度
+PRECISE = 0.001
 
 def sleepPrecise(seconds: float):
     start = time.perf_counter()
-    n = seconds // PRECISE - 1
+    n = seconds // PRECISE - 1 # -1 是因为时钟中断，实际暂停时间更久
     if n > 0:
         time.sleep(n * PRECISE)
     while time.perf_counter() - start < seconds:
         pass
+
+# 循环等待的时间小于 2*PRECISE
+def __sleepWin(seconds: float):
+    start = time.perf_counter()
+    n = seconds // PRECISE - 1
+    if n > 0:
+        winmm.timeBeginPeriod(1)
+        time.sleep(n * PRECISE)
+        winmm.timeEndPeriod(1)
+    while time.perf_counter() - start < seconds:
+        pass
+
+
+if IS_WIN:
+    winmm = ctypes.WinDLL('winmm')
+    sleepPrecise = __sleepWin
+
 
 # 通过耗时测试性能（本身也耗时，自测耗1μs左右）
 class Timer:
     def __init__(self) -> None:
         self.t1 = 0
         self.t2 = 0
+        self.int = 0
 
     def __enter__(self):
         self.t1 = time.perf_counter()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.t2 = time.perf_counter()
-        print(f"{self.t2 - self.t1:.9f}")
+        self.int = self.t2 - self.t1
+        print(f"{self.int:.9f}")
 
 TIMER = Timer()
 

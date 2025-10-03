@@ -14,7 +14,6 @@ import re
 from io import IOBase
 from sys import stdout
 from typing import Any, Union
-from platform import system as getOS
 from os import system, get_terminal_size
 from .style import Style, fg_rgb, bg_rgb
 from .input import inp
@@ -84,20 +83,18 @@ class Output:
         self.__str = ""
         """用于保存已配置style直至打印内容或reset前"""
         self.__acmlt = "mHG"  # 样式累积类型
-        self.fps = 25 # 播放GIF等的帧率
 
-        os = getOS()
-        if os == "Windows":
+        if IS_WIN:
             self.__cls = "cls"
             try:
-                import ctypes
-
                 kernel32 = ctypes.windll.kernel32
                 kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
                 # -11 是 stdout 句柄
             except:
                 self.cls()
-        elif os == "Linux":
+        elif IS_LINUX:
+            self.__cls = "clear"
+        elif IS_MAC:
             self.__cls = "clear"
 
     def setTitle(self, title: str):
@@ -841,7 +838,7 @@ class Output:
             line = ""
             for j in range(10):
                 n = (10 * i) + j
-                line += "\033[%dm  %3d  \033[0m" % (n, n)
+                line += "\033[%dm %3d \033[0m" % (n, n)
             self.alignCenter(line + "\n")
         return self
     
@@ -899,7 +896,7 @@ def NbCmdIO():
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
-    prt.gotoCenterOffset(70)
+    prt.gotoCenterOffset(50)
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
-    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 50).end(2)
     prt.test().end()

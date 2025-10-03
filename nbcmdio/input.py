@@ -1,11 +1,11 @@
-from platform import system as getOS
 import time
 import sys
+from .utils import *
 
-os = getOS()
-if os == "Windows":
+
+if IS_WIN:
     import msvcrt
-elif os == "Linux":
+else:
     import termios
     import tty
 
@@ -44,13 +44,11 @@ class Input:
     }
 
     def __init__(self) -> None:
-        self.os = getOS()
-        self.win = self.os == "Windows"
+        if IS_WIN:
+            self.get_char = self.__win_get_char
+            self.get_str = self.__win_get_str
 
     def get_char(self):
-        if self.win:
-            return self.win_get_char()
-
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         char = ""
@@ -64,8 +62,6 @@ class Input:
         return char
 
     def get_str(self, timeout=0.5):
-        if self.win:
-            return self.win_get_str(timeout)
         start_time = time.time()
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -81,13 +77,13 @@ class Input:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return string
 
-    def win_get_char(self):
+    def __win_get_char(self):
         if msvcrt.kbhit():
             char = msvcrt.getch()
             return char
         return ""
 
-    def win_get_str(self, timeout=0.5):
+    def __win_get_str(self, timeout=0.5):
         start_time = time.time()
         string = ""
         while time.time() - start_time < timeout:
@@ -99,7 +95,7 @@ class Input:
             time.sleep(0.01)
         return string
 
-    def win_get_key(self, timeout=0.1):
+    def __win_get_key(self, timeout=0.1):
         start_time = time.time()
         key = None
 
