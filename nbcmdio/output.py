@@ -69,13 +69,14 @@ class Output:
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
     }
 
-    def __init__(self, auto_reset=True) -> None:
+    def __init__(self, auto_reset=True, auto_flush=True, file=stdout) -> None:
         self.auto_reset = auto_reset
+        self.auto_flush = auto_flush
         self.size_row, self.size_col = 0, 0
         self.origin_row, self.origin_col = 0, 0
         self.height, self.width = 0, 0
         self.getSize()
-        self.setFile(stdout)
+        self.setFile(file)
         self.__row, self.__col = 1, 1
         """保存[] loc()设定的位置，print后即毁 变为默认值1,1。
         未提供 row,col 的函数使用最近一次的此值，"""
@@ -102,11 +103,18 @@ class Output:
         self.write(f"\033]2;{title}\a")
         return self
     
+    def __null(self, *args):
+        pass
+    
     def setFile(self, file):
         if isinstance(file, IOBase) and file.writable():
             self.file = file
             self.write = file.write
             self.flush = file.flush
+        elif file == None:
+            self.file = None
+            self.write = self.__null
+            self.flush = self.__null
         else:
             raise TypeError("Invalid parameter: file, expected: instance of class based on IOBase.")
 
@@ -168,8 +176,8 @@ class Output:
         self.__str = ""
         self.__row = self.__col = 1
         s = sep.join([str(i) for i in args])
-        self.write(s + end) # 在终端会自动flush输出
-        return self.chkReset()
+        self.write(s + end)
+        return self.checkAuto()
 
     def p(self, s: str):
         """不重置样式的输出"""
@@ -184,9 +192,11 @@ class Output:
         self.write(self.RESET)
         return self
     
-    def chkReset(self):
+    def checkAuto(self):
         if self.auto_reset:
             self.reset()
+        if self.auto_flush:
+            self.flush()
         return self
 
     def autoResetOn(self):
@@ -290,7 +300,7 @@ class Output:
     def getLoc(self):
         """获取当前光标位置（相对设定的原点） -> (row, col)"""
         self.write(self.CSI + "6n")
-        self.file.flush()
+        self.flush()
         res = inp.get_str()
         match = re.match(r"^\x1b\[(\d+);(\d+)R", res)
         if match:
@@ -597,7 +607,7 @@ class Output:
         for i in range(length-1):
             self.col(col).p(mark).drawNL()
         self.col(col).p(mark)
-        return self.chkReset()
+        return self.checkAuto()
 
     def drawRect(self, height: int, width: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
@@ -652,7 +662,7 @@ class Output:
         for i in range(len(lines)-1):
             self.col(col).p(lines[i] + "\n")
         self.col(col).p(lines[-1])
-        return self.chkReset()
+        return self.checkAuto()
 
     def drawHGrad(self, color_start: RGB, color_end: RGB, length=0, string="", row=-1, col=-1):
         """产生一条给定长度的水平渐变色带
@@ -730,7 +740,7 @@ class Output:
             string += line+"\n"
             self.col(col)(line)
             if y != height-2: self.drawNL()
-        self.chkReset()
+        self.checkAuto()
         return string, Area(row, col, height // 2, width)
     
     def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False, overflow=0):
@@ -769,7 +779,7 @@ class Output:
             self[row + r // 2, col].p(line)
             if r != height-2: self.drawNL()
             string += line + "\n"
-        self.chkReset()
+        self.checkAuto()
         return string, Area(row, col, height//2, width)
 
     def playGif(self, gif_path, row=-1, col=-1, width=0, height=0, repeat=1):
