@@ -733,7 +733,7 @@ class Output:
         self.chkReset()
         return string, Area(row, col, height // 2, width)
     
-    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False, overflow=0) -> str:
+    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False, overflow=0):
         """ ### 使用ASCII字符绘制灰度图
         - image: 图片路径 / Image
         - row, col: 绘制起点位置(默认使用loc设定的光标位置)
@@ -770,7 +770,7 @@ class Output:
             if r != height-2: self.drawNL()
             string += line + "\n"
         self.chkReset()
-        return string
+        return string, Area(row, col, height//2, width)
 
     def playGif(self, gif_path, row=-1, col=-1, width=0, height=0, repeat=1):
         """### 播放gif动画
@@ -790,8 +790,9 @@ class Output:
                     img = gif.copy()
                     # img = img.convert('RGB')
                     duration = gif.info.get('duration', 0) / 1000
-                    self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
+                    s, area = self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
                     ft.frameTime(duration)
+            height, width = area.height, area.width
         except Exception as e:
             self.printLines(f'Failed to play "{gif_path}": {e}.', width=width, row=row, col=col)
         total_time = time.perf_counter() - t0
