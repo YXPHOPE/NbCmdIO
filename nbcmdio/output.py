@@ -64,6 +64,7 @@ class Output:
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
     __version__ = "1.8.73"
+    BUFSIZE = 4096
     CHARSET = {
         'basic': ' .:-=+*#%@',
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
@@ -176,7 +177,9 @@ class Output:
         self.__str = ""
         self.__row = self.__col = 1
         s = sep.join([str(i) for i in args])
-        self.write(s + end)
+        for i in range(0, len(s), self.BUFSIZE):
+            self.write(s[i:i+self.BUFSIZE])
+        self.write(end)
         return self.checkAuto()
 
     def p(self, s: str):
@@ -737,7 +740,7 @@ class Output:
                 lower = fg_rgb(pixels[x, y + 1])
                 # 使用Unicode上半个字符和下半个字符█▄▀ (也可以用这个画Rect)
                 line += upper + lower + "▄"
-            string += line+"\n"
+            string += line + self.RESET + "\n"
             self.col(col)(line)
             if y != height-2: self.drawNL()
         self.checkAuto()
