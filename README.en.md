@@ -110,9 +110,9 @@ def NbCmdIO():
   
     # Move cursor to next line in region, then exit
     prt[HEIGHT + 1].setOriginTerm().end()
-    prt.gotoCenterOffset(70)
+    prt.gotoCenterOffset(50)
     # Draw a gradient bar, move down 2 lines, test terminal color support
-    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 50).end(2)
     prt.test().end()
 
 NbCmdIO()
@@ -175,6 +175,10 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.72 add: utils.getIMG support url;
 improve: utils.FrameTimer support custom duration for each frame; Output.drawGif uses gif duration.
 - 1.8.73 fix: Output.gotoCenterOffset; height overflow;
+- 1.8.74 fix: return value of Output.drawImageStr
+  add: Output.setFile: file=None, flush
+  fix: Output.print: write by chunk
+  update: system os config
 
 ## 🙏 Acknowledgments
 

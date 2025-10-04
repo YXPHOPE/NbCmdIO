@@ -110,9 +110,9 @@ def NbCmdIO():
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
-    prt.gotoCenterOffset(70)
+    prt.gotoCenterOffset(50)
     # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
-    prt.drawHGrad((51, 101, 211), (190, 240, 72), 70).end(2)
+    prt.drawHGrad((51, 101, 211), (190, 240, 72), 50).end(2)
     prt.test().end()
 
 NbCmdIO()
@@ -175,6 +175,10 @@ pip install nbcmdio
 - 1.8.72 add: utils.getIMG支持url;
   improve: utils.FrameTimer支持特定帧时长; Output.drawGif使用gif帧时长.
 - 1.8.73 fix: Output.gotoCenterOffset; 高度溢出;
+- 1.8.74 fix: Output.drawImageStr的返回值
+  add: Output.setFile: file=None, flush
+  fix: Output.print: 分块写入
+  update: 系统类型配置
 
 ## 🙏 致谢
 

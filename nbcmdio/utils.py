@@ -197,7 +197,7 @@ def sleepPrecise(seconds: float):
         pass
 
 # 循环等待的时间小于 2*PRECISE
-def __sleepWin(seconds: float):
+def __win_sleepPrecise(seconds: float):
     start = time.perf_counter()
     n = seconds // PRECISE - 1
     if n > 0:
@@ -210,7 +210,7 @@ def __sleepWin(seconds: float):
 
 if IS_WIN:
     winmm = ctypes.WinDLL('winmm')
-    sleepPrecise = __sleepWin
+    sleepPrecise = __win_sleepPrecise
 
 
 # 通过耗时测试性能（本身也耗时，自测耗1μs左右）
@@ -218,15 +218,15 @@ class Timer:
     def __init__(self) -> None:
         self.t1 = 0
         self.t2 = 0
-        self.int = 0
+        self.span = 0
 
     def __enter__(self):
         self.t1 = time.perf_counter()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.t2 = time.perf_counter()
-        self.int = self.t2 - self.t1
-        print(f"{self.int:.9f}")
+        self.span = self.t2 - self.t1
+        print(f"{self.span:.9f}")
 
 TIMER = Timer()
 

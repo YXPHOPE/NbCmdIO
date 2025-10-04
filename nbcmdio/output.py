@@ -62,7 +62,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.73"
+    __version__ = "1.8.74"
     BUFSIZE = 4096
     CHARSET = {
         'basic': ' .:-=+*#%@',
