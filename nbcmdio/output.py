@@ -487,15 +487,16 @@ class Output:
         return self
 
     def getSize(self):
-        """返回终端大小（rows，columns）"""
+        """更新并返回终端大小（rows，columns）"""
         try:
             size = get_terminal_size()
-            self.size_row = rows = size.lines
-            self.size_col = columns = size.columns
-            self.height = self.size_row - self.origin_row
-            self.width = self.size_col - self.origin_col
+            rows, columns = size.lines, size.columns
         except OSError:
-            return 30, 120
+            rows, columns = 30, 120
+        self.size_row = rows
+        self.size_col = columns
+        self.height = self.size_row - self.origin_row
+        self.width = self.size_col - self.origin_col
         return rows, columns
 
     def gotoCenterOffset(self, len_str: int, row=-1):
