@@ -179,6 +179,7 @@ pip install nbcmdio
   add: Output.setFile: file=None, flush；
   fix: Output.print: 分块写入；
   update: 系统类型配置
+- 1.8.75 improve: 性能提升2.31倍（相较于1.8.74，提供474x474的RGB格式Image对象，Output.drawImage直接输出该大小图像时）
 
 ## 🙏 致谢
 

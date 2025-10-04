@@ -179,6 +179,8 @@ improve: utils.FrameTimer support custom duration for each frame; Output.playGif
   add: Output.setFile: file=None, flush;
   fix: Output.print: write by chunk;
   update: system os config
+- 1.8.75 improve: 
+Performance improved by 2.31x (compared to version 1.8.74, when providing a 474x474 RGB-format Image object and directly outputting it at that size via Output.drawImage)
 
 ## 🙏 Acknowledgments
 
