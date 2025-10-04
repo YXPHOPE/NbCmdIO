@@ -58,31 +58,27 @@ BG_WHITE = Style(CSI + "47m")
 
 
 # 高频的I/O操作性能影响大，建议先连接所有的转义序列字符串再输出
-def fg_rgb(rgb: RGB, bg: Union[bool, int] = False):
+def fg_rgb(rgb: RGB):
     """设置前景文字rgb颜色
     rgb: [0,128,255]"""
-    err = "Argument rgb needs a list or a tuple, len=3, value between 0~255"
-    if not rgb.__len__:
-        raise TypeError(err)
-    if len(rgb) != 3:
-        raise ValueError(err)
-    bf = "4" if bg else "3"
-    return CSI + f"{bf}8;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
+    return CSI + f"38;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
 
 
 def bg_rgb(rgb: RGB):
     """设置背景rgb颜色
     rgb: [0,128,255]"""
-    return fg_rgb(rgb, 1)
+    return CSI + f"48;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
 
 
 def fg_hex(hex: str):
     """设置前景文字hex颜色
     hex: 0F0, #CCF, 008AFF, #CCCCFF"""
-    return fg_rgb(hex2RGB(hex))
+    rgb = hex2RGB(hex)
+    return CSI + f"38;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
 
 
 def bg_hex(hex: str):
     """设置背景hex颜色
     hex: 0F0, #CCF, 008AFF, #CCCCFF"""
-    return bg_rgb(hex2RGB(hex))
+    rgb = hex2RGB(hex)
+    return CSI + f"48;2;{rgb[0]};{rgb[1]};{rgb[2]}m"
