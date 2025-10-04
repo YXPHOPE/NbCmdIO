@@ -133,18 +133,11 @@ def genGradient(color_start: RGB, color_end: RGB, num: int):
 
     Returns:
         包含起始颜色、渐变色和结束颜色的列表"""
-    r_start, g_start, b_start = color_start
-    r_end, g_end, b_end = color_end
     num -= 1
-    r_step = (r_end - r_start) / num
-    g_step = (g_end - g_start) / num
-    b_step = (b_end - b_start) / num
-    gradient = []
-    for i in range(num + 1):
-        r = int(r_start + r_step * i)
-        g = int(g_start + g_step * i)
-        b = int(b_start + b_step * i)
-        gradient.append((r, g, b))
+    step = [(color_end[i] - color_start[i]) / num for i in range(3)]
+    gradient = [(int(color_start[0]+step[0]*i),
+                int(color_start[1]+step[1]*i),
+                int(color_start[2]+step[2]*i)) for i in range(num+1)]
     return gradient
 
 def toImage(img_path: Union[str, Image.Image]):
@@ -169,18 +162,21 @@ def toImage(img_path: Union[str, Image.Image]):
 
 def getIMG(img_path: Union[str, Image.Image], height:int, width:int, resample=1):
     img = toImage(img_path)
+    if img.mode != "RGB":
+        img = img.convert("RGB")
     # 计算缩放比例
     img_width, img_height = img.size
     ratio_width = width / img_width
     ratio_height = height / img_height
     ratio = min(ratio_width, ratio_height)
+    if ratio == 1:
+        return img
     new_width = int(img_width * ratio)
     new_height = int(img_height * ratio)
     if new_height % 2:
         new_height += 1
     # 缩放图片
     img = img.resize((new_width, new_height), resample)
-    img = img.convert("RGB")
     return img
 
 
@@ -216,7 +212,7 @@ if IS_WIN:
 # 通过耗时测试性能（本身也耗时，自测耗1μs左右）
 class Timer:
     def __init__(self) -> None:
-        self.t1 = 0
+        self.t1 = time.perf_counter()
         self.t2 = 0
         self.span = 0
 
@@ -227,6 +223,13 @@ class Timer:
         self.t2 = time.perf_counter()
         self.span = self.t2 - self.t1
         print(f"{self.span:.9f}")
+
+    def update(self):
+        """ 获取与上一次update之间的时间间隔 """
+        self.t2 = time.perf_counter()
+        self.span = self.t2 - self.t1
+        self.t1 = self.t2
+        return self.span
 
 TIMER = Timer()
 

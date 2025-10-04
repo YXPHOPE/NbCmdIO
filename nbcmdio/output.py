@@ -63,7 +63,7 @@ class Output:
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
     __version__ = "1.8.74"
-    BUFSIZE = 4096
+    BUFSIZE = 8192
     CHARSET = {
         'basic': ' .:-=+*#%@',
         'dots': ' ⠂⠢⠴⠶⠾⡾⣷⣿▒'
@@ -286,12 +286,21 @@ class Output:
         if row<0 or col<0 or row>self.size_row or col>self.size_col:
             raise ValueError(f"Beyond the size: loc of ({row}, {col}) from origin({self.__row}, {self.__col}).")
         return self.csi(f"{row};{col}H")
+    
+    def __rloc(self, row: int, col=0):
+        row += self.origin_row
+        col += self.origin_col
+        return self.CSI + f"{row};{col}H"
 
     def col(self, n: int):
         col = n + self.origin_col
         if col > self.size_col:
             raise ValueError(f"Beyond the size: col {n} from origin({self.__row}, {self.__col}).")
         return self.csi(f"{col}G")
+    
+    def __rcol(self, n:int):
+        n += self.origin_col
+        return self.CSI + f'{n}G'
 
     def gotoHead(self):
         """回到本行行首（基于坐标原点）"""
@@ -605,10 +614,9 @@ class Output:
         row, col = self.valLoc(row, col)
         if overflow==0 and row + length - 1> self.height:
             raise ValueError(f"Beyond the region: Given length {length} from row {row} > height {self.height}!")
-        for i in range(length-1):
-            self.col(col).p(mark).drawNL()
-        self.col(col).p(mark)
-        return self.checkAuto()
+        line = self.__rcol(col)
+        line = line + ('\n'+line).join([mark]*length)
+        return self(line)
 
     def drawRect(self, height: int, width: int, row=-1, col=-1, as_origin=True):
         """产生一个方形，并设定新的坐标原点"""
@@ -620,9 +628,9 @@ class Output:
             row = col = 0
         reset = self.auto_reset
         self.autoResetOff()
-        self[row, col]("┌").drawHLine(width)("┐")
+        self[row, col].p("┌").drawHLine(width).p("┐")
         self[row + 1, col].drawVLine(height)[row + 1, col + width + 1].drawVLine(height)
-        self[row + height + 1, col]("└").drawHLine(width)("┘")
+        self[row + height + 1, col].p("└").drawHLine(width).p("┘")
         if reset:
             self.reset()
         self.auto_reset = reset
@@ -670,9 +678,11 @@ class Output:
         - 至少提供 length、string 中的一个
         - string中的双宽字符会占据两个宽度，但只有一个色块"""
         string = string.replace("\t", Tab)
+        blank = 0
         if not length:
             length = getStringWidth(string)
         if not string:
+            blank = 1
             string = " " * length
         string = padString(string, length)
         if not length:
@@ -681,6 +691,8 @@ class Output:
         if length + col - 1 > self.width:
             raise ValueError(f"Beyond the region: length {length} from col {col} > {self.width}.")
         gradient = genGradient(color_start, color_end, length)
+        if blank:
+            return self(''.join([bg_rgb(color)+' ' for color in gradient]))
         i, n_wc, is_wc, line = 0, 0, False, ""
         while i < length:
             if is_wc:
@@ -703,12 +715,11 @@ class Output:
         row, col = self.valLoc(row, col)
         if overflow==0 and row + length - 1> self.height:
             raise ValueError(f"Beyond the region: Given length {length} from row {row} > height {self.height}!")
-        for i in range(0, double-2, 2):
-            self.col(col)(bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄").drawNL()
-        self.col(col)(bg_rgb(gradient[-2]) + fg_rgb(gradient[-1]) + "▄")
-        return self
+        strcol = self.__rcol(col)
+        line = strcol + ('\n'+strcol).join([bg_rgb(gradient[i]) + fg_rgb(gradient[i+1]) + "▄" for i in range(0, double, 2)])
+        return self(line)
 
-    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, height=0, width=0, resample=1, overflow=0):
+    def drawImage(self, img_path: Union[str, Image.Image], row=-1, col=-1, height=0, width=0, resample=1, overflow=0, print=1):
         """### 在终端绘制图片
         - img_path: 图片路径 / Image对象
         - row, col: 起始位置(默认使用loc设定的光标位置)
@@ -728,23 +739,16 @@ class Output:
         img = getIMG(img_path, height=height * 2, width=width, resample=resample)
         width, height = img.size # 经过getIMG处理，height一定为偶数
         pixels = img.load()
-        string = ""
-        # 定位光标
-        for y in range(0, height, 2):  # 每两行一组
-            line = ""
-            for x in range(width):
-                # 获取上下两个像素
-                upper = bg_rgb(pixels[x, y])
-                lower = fg_rgb(pixels[x, y + 1])
-                # 使用Unicode上半个字符和下半个字符█▄▀ (也可以用这个画Rect)
-                line += upper + lower + "▄"
-            string += line + self.RESET + "\n"
-            self.col(col)(line)
-            if y != height-2: self.drawNL()
-        self.checkAuto()
-        return string, Area(row, col, height // 2, width)
+
+        ret_nl = self.RESET + "\n"
+        prt_nl = ret_nl + self.__rcol(col)
+        lines = [''.join(
+                [bg_rgb(pixels[c, r]) + fg_rgb(pixels[c, r + 1]) + "▄" for c in range(width)]
+            ) for r in range(0, height, 2)]
+        if print: self(prt_nl.join(lines))
+        return ret_nl.join(lines), Area(row, col, height // 2, width)
     
-    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False, overflow=0):
+    def drawImageStr(self, image: Union[str, Image.Image], row=-1, col=-1, width=0, height=0, chars='basic', resample=1, invert_background=False, overflow=0, print=1):
         """ ### 使用ASCII字符绘制灰度图
         - image: 图片路径 / Image
         - row, col: 绘制起点位置(默认使用loc设定的光标位置)
@@ -757,31 +761,24 @@ class Output:
         Returns: str 用chars构成的图片灰度图"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width, h_overflow=overflow)
-        if chars in self.CHARSET:
-            chars = self.CHARSET[chars]
         image = getIMG(image, height=height * 2, width=width, resample=resample)
-        tmp = 255 / len(chars) # 256色分给chars，值越大越亮，字符越密
-        div = int(tmp) # 和下句共同构成math.ceil效果
-        if div != tmp:
-            div += 1
         width, height = image.size
         image = image.convert('L')
         pix = image.getdata()
 
-        string = ''
+        if chars in self.CHARSET:
+            chars = self.CHARSET[chars]
         if invert_background:
             chars = list(reversed(chars))
-        for r in range(0, height, 2):
-            line = ""
-            for c in range(width):
-                i = r * width + c # 2行取平均值
-                d = (pix[i] + pix[i+width]) // 2 // div
-                line += chars[d]
-            self[row + r // 2, col].p(line)
-            if r != height-2: self.drawNL()
-            string += line + "\n"
-        self.checkAuto()
-        return string, Area(row, col, height//2, width)
+        tmp = 255 / len(chars) # 256色分给chars，值越大越亮，字符越密
+        div = int(tmp) # 和下句共同构成math.ceil效果
+        if div != tmp: div += 1
+
+        ret_nl = "\n"
+        prt_nl = ret_nl + self.__rcol(col)
+        lines = [''.join([chars[pix[r * width + c]//div] for c in range(width)]) for r in range(0, height, 2)]
+        if print: self(prt_nl.join(lines))
+        return ret_nl.join(lines), Area(row, col, height//2, width)
 
     def playGif(self, gif_path, row=-1, col=-1, width=0, height=0, repeat=1):
         """### 播放gif动画
@@ -798,10 +795,8 @@ class Output:
                 ft = FrameTimer(frames)
                 for i, _ in ft:
                     gif.seek(i)
-                    img = gif.copy()
-                    # img = img.convert('RGB')
                     duration = gif.info.get('duration', 0) / 1000
-                    s, area = self[row, col].drawImage(img, row=row, col=col, width=width, height=height, resample=0)
+                    s, area = self[row, col].drawImage(gif, row=row, col=col, width=width, height=height, resample=0)
                     ft.frameTime(duration)
             height, width = area.height, area.width
         except Exception as e:
@@ -815,10 +810,9 @@ class Output:
         - 用空格清除指定位置大小的内容"""
         row, col = self.valLoc(row, col)
         height, width = self.valSize(row, col, height, width)
-        line = ' ' * width
-        for i in range(height):
-            self[row + i, col].p(line)
-        return self
+        line = self.__rcol(col) + ' ' * width
+        lines = '\n'.join([line]*height)
+        return self(lines)
         
     # with上下文管理
     def __enter__(self):
