@@ -164,20 +164,20 @@ Ready to elevate your command-line experience to a whole new dimension? NbCmdIO 
 - 1.8.3 Fixed issues, added quick PS1 batch files, separated style module
 - 1.8.4 Added multi-line region printing, separated utils
 - 1.8.5 feat: drawHGrad (gradient), drawIMG (terminal image display)
-- 1.8.6 improve: added validation for loc, size
+- 1.8.6 improve: added validation for loc, size;
   feat: drawImageStr
 - 1.8.63 feat: Output.playGif
 - 1.8.64 fix: height overflow in Output.valSize
-- 1.8.7 big change: Many functions have their parameter order as height before width.
-  add: Area, Output.clearRegion
+- 1.8.7 big change: Many functions have their parameter order as height before width;
+  add: Area, Output.clearRegion;
   fix: some little problem
-- 1.8.71 feat: FrameTimer, used in Output.drawGif
+- 1.8.71 feat: FrameTimer, used in Output.playGif
 - 1.8.72 add: utils.getIMG support url;
-improve: utils.FrameTimer support custom duration for each frame; Output.drawGif uses gif duration.
+improve: utils.FrameTimer support custom duration for each frame; Output.playGif uses gif duration.
 - 1.8.73 fix: Output.gotoCenterOffset; height overflow;
-- 1.8.74 fix: return value of Output.drawImageStr
-  add: Output.setFile: file=None, flush
-  fix: Output.print: write by chunk
+- 1.8.74 fix: return value of Output.drawImageStr;
+  add: Output.setFile: file=None, flush;
+  fix: Output.print: write by chunk;
   update: system os config
 
 ## 🙏 Acknowledgments

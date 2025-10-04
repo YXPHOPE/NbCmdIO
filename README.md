@@ -164,20 +164,20 @@ pip install nbcmdio
 - 1.8.3 修复部分问题，添加快捷ps1批处理文件，分离style
 - 1.8.4 添加多行区域打印，分离utils
 - 1.8.5 feat: drawHGrad(渐变), drawIMG(终端显示图片)
-- 1.8.6 improve: 增加 loc, size 的有效性验证
+- 1.8.6 improve: 增加 loc, size 的有效性验证；
   feat: drawImageStr ASCII绘制灰度图
 - 1.8.63 feat: Output.playGif, 播放gif动画
 - 1.8.64 fix: Output.valSize, 高度溢出
-- 1.8.7 big change: 许多函数把height参数提到width前了
-  add: Area, Output.clearRegion 清除区域
+- 1.8.7 big change: 许多函数把height参数提到width前了；
+  add: Area, Output.clearRegion 清除区域；
   fix: 一些小问题
-- 1.8.71 feat: FrameTimer, 用于Output.drawGif
-- 1.8.72 add: utils.getIMG支持url;
-  improve: utils.FrameTimer支持特定帧时长; Output.drawGif使用gif帧时长.
+- 1.8.71 feat: FrameTimer, 用于Output.playGif
+- 1.8.72 add: utils.getIMG支持url；
+  improve: utils.FrameTimer支持特定帧时长; Output.playGif使用gif帧时长.
 - 1.8.73 fix: Output.gotoCenterOffset; 高度溢出;
-- 1.8.74 fix: Output.drawImageStr的返回值
-  add: Output.setFile: file=None, flush
-  fix: Output.print: 分块写入
+- 1.8.74 fix: Output.drawImageStr的返回值；
+  add: Output.setFile: file=None, flush；
+  fix: Output.print: 分块写入；
   update: 系统类型配置
 
 ## 🙏 致谢
