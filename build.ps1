@@ -31,3 +31,10 @@ python setup.py sdist bdist_wheel
 Write-Host "`n构建完成！" -ForegroundColor Green
 Write-Host "包文件在 dist 目录下："
 Get-ChildItem dist | Format-Table Name
+
+# 本地安装测试
+$whlFiles = Get-ChildItem -Path .\dist\*.whl
+foreach ($whl in $whlFiles) {
+  Write-Host "正在安装: $($whl.FullName)"
+  pip install $whl.FullName --force-reinstall
+}

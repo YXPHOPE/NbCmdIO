@@ -2,7 +2,7 @@ import re
 import os
 from setuptools import setup, find_packages
 
-VERSION = "1.8.75"
+VERSION = "1.8.76"
 long_desc = open("README.en.md", encoding="utf-8").read()
 
 
@@ -48,7 +48,7 @@ setup(
     python_requires=">=3.6",
     entry_points={
         'console_scripts': [
-            'prt=nbcmdio.cli:main',
+            'prt=nbcmdio.cli:cli',
         ],
     }
 )

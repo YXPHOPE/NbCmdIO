@@ -62,6 +62,24 @@ pip install nbcmdio
 
 ### 基础使用
 
+- 命令行用法:
+
+```bash
+# 清屏然后 绘制图片
+prt cls drawImage "path/to/image/file"
+
+# 前景#CCF粗体居中打印
+prt fg_hex CCF bold alignCenter "Hello!"
+
+# 列出所有可用函数
+prt list
+
+# 获取function的帮助信息
+prt help <function>
+```
+
+- Python:
+
 ```python
 from nbcmdio import prt
 
@@ -180,6 +198,7 @@ pip install nbcmdio
   fix: Output.print: 分块写入；
   update: 系统类型配置
 - 1.8.75 improve: 性能提升2.31倍（相较于1.8.74，提供474x474的RGB格式Image对象，Output.drawImage直接输出该大小图像时）
+- 1.8.76 add: 提供命令行工具prt
 
 ## 🙏 致谢
 

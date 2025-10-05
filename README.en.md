@@ -62,6 +62,24 @@ pip install nbcmdio
 
 ### Basic Usage
 
+- Command Line Usage:
+
+```bash
+# clear screen and draw a image
+prt cls drawImage "path/to/image/file"
+
+# Print in foreground color #CCF, bold and center-aligned
+prt fg_hex CCF bold alignCenter "Hello!"
+
+# List all available functions
+prt list
+
+# Get help of function
+prt help <function>
+```
+
+- Python Usage:
+
 ```python
 from nbcmdio import prt
 
@@ -181,6 +199,7 @@ improve: utils.FrameTimer support custom duration for each frame; Output.playGif
   update: system os config
 - 1.8.75 improve: 
 Performance improved by 2.31x (compared to version 1.8.74, when providing a 474x474 RGB-format Image object and directly outputting it at that size via Output.drawImage)
+- 1.8.76 add: support cli tool "prt"
 
 ## 🙏 Acknowledgments
 

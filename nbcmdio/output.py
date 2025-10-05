@@ -62,7 +62,7 @@ class Output:
 
     CSI, RESET = "\033[", "\033[0m"
     __cls = "cls"
-    __version__ = "1.8.75"
+    __version__ = "1.8.76"
     BUFSIZE = 8192
     CHARSET = {
         'basic': ' .:-=+*#%@',
@@ -845,7 +845,7 @@ class Output:
 prt = Output()
 
 
-def NbCmdIO():
+def NbCmdIO(test=False):
     lavender = "#ccf"
     # 清屏并设置终端标题
     prt.cls().setTitle("NbCmdIO")
@@ -890,7 +890,8 @@ def NbCmdIO():
 
     # 光标跳至本区域下一行，结束
     prt[HEIGHT + 1].setOriginTerm().end()
-    prt.gotoCenterOffset(50)
-    # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
-    prt.drawHGrad((51, 101, 211), (190, 240, 72), 50).end(2)
-    prt.test().end()
+    if test:
+        prt.gotoCenterOffset(50)
+        # 画一条渐变带，然后下移2行，测试终端对颜色效果的支持情况
+        prt.drawHGrad((51, 101, 211), (190, 240, 72), 50).end(2)
+        prt.test().end()

@@ -2,7 +2,7 @@ import sys
 import re
 from inspect import signature
 from typing import Callable, Dict, List, Any
-from .output import prt
+from .output import prt, NbCmdIO
 
 re_int = re.compile(r'^-?\d+$')
 re_float = re.compile(r'^-?\d+\.\d+$')
@@ -16,6 +16,7 @@ FUNCTIONS: Dict[object, list[str]] = {
     "cls",
     "print",
     "reset",
+    "end",
     "loc",
     "col",
     "getLoc",
@@ -82,7 +83,7 @@ def list_functions():
     for obj in FUNCTIONS:
         funs = '\n'.join([f'    {sty_name}{i}{sty_args}{str(signature(get_fun(i)))}\n' for i in FUNCTIONS[obj]])
         prt(funs).drawNL()
-    prt("For detailed information about function, type:\n\n").col(5).bold().fg_yellow("help <function>")
+    prt("For detailed information about function, type:\n\n").col(5).bold().fg_yellow("help <function>\n").end()
 
 def help_function(func=None):
     if func==None:
@@ -90,14 +91,14 @@ def help_function(func=None):
         prt.bold("Usage")(": prt func1 args func2 args...\n")
         prt("Example:\n\n")
         prt.col(4)("prt loc 3 4 drawImage filepath\n")
-        prt.col(4)('prt fg_hex #ccf bold "text"\n\n')
+        prt.col(4)('prt fg_hex "#ccf" bold "text"\n\n')
         prt.bold().fg_yellow("prt list")(": list all available functions\n")
-        prt.bold().fg_yellow("prt help <function>")(": get help information of function\n")
+        prt.bold().fg_yellow("prt help <function>")(": get help information of function\n").end()
         return
     fun = get_fun(func)
     prt("Function ").bold().fg_yellow(func)(":\n")
     prt.col(5).bold().fg_hex('6f6')(func)(str(signature(fun))).drawNL()
-    prt.col(7)(fun.__doc__)
+    prt.col(7)(fun.__doc__).drawNL().end()
 
 def parse_value(arg):
     if re_int.match(arg):
@@ -156,6 +157,7 @@ def cli():
     """主函数，处理命令行参数"""
     argv = sys.argv[1:]
     if not argv:
+        NbCmdIO()
         help_function()
         return
     
