@@ -186,8 +186,7 @@ class Output:
     
     def reset(self):
         """重置所有样式"""
-        # ? 是否先self.csi("0m")，再self.__str = ""，这样获取样式时就不会有开头的先自动重置
-        self.__str = ""
+        self.__str = self.RESET
         self.__row = self.__col = 1
         self.write(self.RESET)
         return self
@@ -486,7 +485,7 @@ class Output:
             sty += self.__str
         if not sty:
             # 没有参数，则使用前面已写入的样式
-            sty = re.sub(r"\033\[0m", "", self.__str)
+            sty = self.__str
         self.reset()
         return Style(sty)
 
@@ -827,7 +826,7 @@ class Output:
         return True
 
     def test(self):
-        """测试终端能显示的指令\033[0-109m"""
+        """测试终端能显示的指令\\033[0-109m"""
         n = 0
         for i in [0, 2, 3, 4, 9, 10]:
             line = ""
